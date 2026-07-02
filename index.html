@@ -557,7 +557,9 @@ analyzeBtn.addEventListener('click', async ()=>{
     const parsed = await response.json();
 
     if(!response.ok){
-      throw new Error(parsed.error || ("Request failed (" + response.status + ")"));
+      const e = new Error(parsed.error || ("Request failed (" + response.status + ")"));
+      e.detail = parsed.detail;
+      throw e;
     }
 
     if(parsed.isDocument === false){
@@ -574,7 +576,7 @@ analyzeBtn.addEventListener('click', async ()=>{
     const isNetworkError = err.message === 'Failed to fetch' || err instanceof TypeError;
     errorBox.textContent = isNetworkError
       ? "Couldn't reach the analysis service. Check your connection and try again."
-      : err.message;
+      : err.message + (err.detail ? " (" + err.detail + ")" : "");
     errorBox.style.display = 'block';
     statusText.textContent = '';
   }finally{
