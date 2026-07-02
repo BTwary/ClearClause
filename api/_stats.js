@@ -9,25 +9,172 @@
 // run as their own isolated serverless function -- they do NOT share
 // process memory with each other, even though they're all files in the
 // same /api folder. A plain in-memory counter written in analyze.js is
-// invisible to stats.js. So this module talks to Redis via the Vercel
-// KV / Upstash REST API when it's configured, and falls back to an
-// in-memory counter (useful for local `vercel dev`, or if you haven't set
-// up storage yet) when it isn't. recordEvent()/getStats() are the only
-// two functions the rest of the app calls, so which backend is active is
-// invisible to analyze.js, feedback.js, and stats.js.
+// invisible to stats.js. So this module talks to a real database when one
+// is configured, and only falls back to an in-memory counter (useful for
+// local `vercel dev`, or before you've set anything up) when it isn't.
+// recordEvent()/getStats() are the only two functions the rest of the app
+// calls, so which backend is active is invisible to analyze.js,
+// feedback.js, and stats.js.
 //
-// TO ENABLE PERSISTENCE: in your Vercel project, go to Storage -> Create
-// Database -> KV (this provisions an Upstash Redis instance and wires it
-// up automatically). Once connected, Vercel sets KV_REST_API_URL and
-// KV_REST_API_TOKEN as environment variables for you -- no code changes,
-// no extra npm install, just redeploy. If you connect an Upstash database
-// directly instead of through Vercel's KV integration, it will set
-// UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN instead, which this
-// module also checks for.
+// Two backends are supported, checked in this order:
+//   1. Supabase (Postgres) -- SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+//   2. Redis (Vercel KV / Upstash) -- KV_REST_API_URL + KV_REST_API_TOKEN
+//      (or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN)
+//   3. In-memory fallback if neither is configured.
+//
+// ---- SETTING UP SUPABASE (using your existing Supabase project) ----
+// 1. In Supabase, open your project -> SQL Editor -> New query, and run:
+//
+//      create table if not exists clearclause_stats (
+//        key text primary key,
+//        value bigint not null default 0
+//      );
+//
+//      create table if not exists clearclause_doc_types (
+//        doc_type text primary key,
+//        count bigint not null default 0
+//      );
+//
+//      create or replace function clearclause_incr(p_key text, p_amount bigint default 1)
+//      returns void as $$
+//      begin
+//        insert into clearclause_stats (key, value)
+//        values (p_key, p_amount)
+//        on conflict (key) do update set value = clearclause_stats.value + excluded.value;
+//      end;
+//      $$ language plpgsql;
+//
+//      create or replace function clearclause_incr_doctype(p_type text, p_amount bigint default 1)
+//      returns void as $$
+//      begin
+//        insert into clearclause_doc_types (doc_type, count)
+//        values (p_type, p_amount)
+//        on conflict (doc_type) do update set count = clearclause_doc_types.count + excluded.count;
+//      end;
+//      $$ language plpgsql;
+//
+//      create or replace function clearclause_set_if_absent(p_key text, p_value bigint)
+//      returns void as $$
+//      begin
+//        insert into clearclause_stats (key, value)
+//        values (p_key, p_value)
+//        on conflict (key) do nothing;
+//      end;
+//      $$ language plpgsql;
+//
+// 2. In Supabase, go to Project Settings -> API. Copy the "Project URL"
+//    and the "service_role" secret key (NOT the anon/public key -- the
+//    service role key is required so writes aren't blocked by row-level
+//    security; it never reaches the browser, it's only used here on the
+//    server).
+// 3. In Vercel, go to your project -> Settings -> Environment Variables
+//    and add:
+//      SUPABASE_URL = <your Project URL>
+//      SUPABASE_SERVICE_ROLE_KEY = <your service_role key>
+// 4. Redeploy. /stats.html will show "Backed by Supabase" once it's picked up.
+
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_ENABLED = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-const REDIS_ENABLED = Boolean(REDIS_URL && REDIS_TOKEN);
+const REDIS_ENABLED = !SUPABASE_ENABLED && Boolean(REDIS_URL && REDIS_TOKEN);
+
+const BACKEND = SUPABASE_ENABLED ? "supabase" : REDIS_ENABLED ? "redis" : "in-memory";
+
+// ---- Supabase backend ----
+
+function supabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    "Content-Type": "application/json",
+    ...extra,
+  };
+}
+
+async function supabaseRpc(fn, args) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: supabaseHeaders(),
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) {
+    throw new Error(`Supabase RPC ${fn} failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+async function supabaseSelect(table, select) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(select)}`, {
+    headers: supabaseHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(`Supabase select on ${table} failed: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+async function recordEventSupabase(event, payload) {
+  const calls = [supabaseRpc("clearclause_set_if_absent", { p_key: "windowStartedAt", p_value: Date.now() })];
+
+  switch (event) {
+    case "request":
+      calls.push(supabaseRpc("clearclause_incr", { p_key: "totalRequests" }));
+      break;
+    case "rate_limited":
+      calls.push(supabaseRpc("clearclause_incr", { p_key: "rateLimitHits" }));
+      break;
+    case "error":
+      calls.push(supabaseRpc("clearclause_incr", { p_key: "errors" }));
+      break;
+    case "not_document":
+      calls.push(supabaseRpc("clearclause_incr", { p_key: "notDocumentCount" }));
+      break;
+    case "feedback":
+      if (payload.value === "yes") calls.push(supabaseRpc("clearclause_incr", { p_key: "feedbackYes" }));
+      else if (payload.value === "no") calls.push(supabaseRpc("clearclause_incr", { p_key: "feedbackNo" }));
+      break;
+    case "completed": {
+      const type = String(payload.documentType || "Unlabeled").trim().slice(0, 60) || "Unlabeled";
+      calls.push(supabaseRpc("clearclause_incr", { p_key: "completedAnalyses" }));
+      calls.push(supabaseRpc("clearclause_incr_doctype", { p_type: type }));
+      if (typeof payload.documentLength === "number") {
+        calls.push(supabaseRpc("clearclause_incr", { p_key: "totalDocumentLength", p_amount: payload.documentLength }));
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  await Promise.all(calls);
+}
+
+async function getStatsSupabase() {
+  const [statRows, docTypeRows] = await Promise.all([
+    supabaseSelect("clearclause_stats", "key,value"),
+    supabaseSelect("clearclause_doc_types", "doc_type,count"),
+  ]);
+
+  const byKey = Object.fromEntries(statRows.map((r) => [r.key, Number(r.value) || 0]));
+  const documentTypeCounts = Object.fromEntries(docTypeRows.map((r) => [r.doc_type, Number(r.count) || 0]));
+
+  return buildStatsPayload({
+    totalRequests: byKey.totalRequests || 0,
+    completedAnalyses: byKey.completedAnalyses || 0,
+    notDocumentCount: byKey.notDocumentCount || 0,
+    errors: byKey.errors || 0,
+    rateLimitHits: byKey.rateLimitHits || 0,
+    totalDocumentLength: byKey.totalDocumentLength || 0,
+    feedbackYes: byKey.feedbackYes || 0,
+    feedbackNo: byKey.feedbackNo || 0,
+    windowStartedAt: byKey.windowStartedAt || Date.now(),
+    documentTypeCounts,
+  });
+}
+
+// ---- Redis backend (Vercel KV / Upstash) ----
 
 const KEY_PREFIX = "clearclause:stats:";
 const COUNTER_KEYS = {
@@ -43,8 +190,6 @@ const COUNTER_KEYS = {
 };
 const DOC_TYPES_HASH_KEY = KEY_PREFIX + "docTypes";
 
-// Runs a batch of Redis commands in one HTTP round-trip via Upstash's
-// REST pipeline endpoint. Each command is an array like ["INCR", "key"].
 async function redisPipeline(commands) {
   const res = await fetch(`${REDIS_URL}/pipeline`, {
     method: "POST",
@@ -57,12 +202,10 @@ async function redisPipeline(commands) {
   if (!res.ok) {
     throw new Error(`Redis pipeline failed: ${res.status} ${await res.text()}`);
   }
-  return res.json(); // array of { result } | { error }, one per command
+  return res.json();
 }
 
 async function ensureWindowStarted() {
-  // SET ... NX only writes if the key doesn't already exist, so this is
-  // safe to call on every event without overwriting the real start time.
   await redisPipeline([["SET", COUNTER_KEYS.windowStartedAt, String(Date.now()), "NX"]]);
 }
 
@@ -129,7 +272,7 @@ async function getStatsRedis() {
 
   const toInt = (r) => parseInt(r?.result, 10) || 0;
 
-  const docTypesFlat = docTypesRes?.result || []; // Upstash returns HGETALL as a flat [field, value, field, value, ...] array
+  const docTypesFlat = docTypesRes?.result || [];
   const documentTypeCounts = {};
   for (let i = 0; i < docTypesFlat.length; i += 2) {
     documentTypeCounts[docTypesFlat[i]] = parseInt(docTypesFlat[i + 1], 10) || 0;
@@ -149,7 +292,7 @@ async function getStatsRedis() {
   });
 }
 
-// ---- In-memory fallback (used for local dev, or if Redis isn't configured yet) ----
+// ---- In-memory fallback (local dev, or before any backend is configured) ----
 
 const memoryStats = {
   totalRequests: 0,
@@ -222,8 +365,15 @@ function buildStatsPayload({
   const rate = (n) => (totalRequests ? +(n / totalRequests).toFixed(3) : null);
   const totalFeedback = feedbackYes + feedbackNo;
 
+  const notes = {
+    supabase: "Backed by Supabase (Postgres) — durable across requests and cold starts.",
+    redis: "Backed by Redis (Vercel KV / Upstash) — durable across requests and cold starts.",
+    "in-memory":
+      "No database configured, so this is falling back to in-memory, per-instance counters — they reset on cold start and won't stay in sync across serverless instances. See the setup comment at the top of api/_stats.js to connect Supabase (or Redis).",
+  };
+
   return {
-    persistence: REDIS_ENABLED ? "redis" : "in-memory",
+    persistence: BACKEND,
     windowStartedAt: new Date(windowStartedAt).toISOString(),
     totalRequests,
     completedAnalyses,
@@ -241,29 +391,39 @@ function buildStatsPayload({
     feedbackNo,
     totalFeedback,
     satisfactionRate: totalFeedback ? +(feedbackYes / totalFeedback).toFixed(3) : null,
-    note: REDIS_ENABLED
-      ? "Backed by Redis (Vercel KV / Upstash) — durable across requests and cold starts."
-      : "No KV_REST_API_URL/TOKEN found, so this is falling back to in-memory, per-instance counters — they reset on cold start and won't stay in sync across serverless instances. Set up Vercel KV (Storage → Create Database → KV) to make these durable. See the comment at the top of api/_stats.js.",
+    note: notes[BACKEND],
   };
 }
 
 // ---- Public API ----
 
 export async function recordEvent(event, payload = {}) {
-  if (REDIS_ENABLED) {
+  if (SUPABASE_ENABLED) {
+    try {
+      await recordEventSupabase(event, payload);
+      return;
+    } catch (err) {
+      console.error("[stats] Supabase write failed, falling back to in-memory for this event:", err.message || err);
+    }
+  } else if (REDIS_ENABLED) {
     try {
       await recordEventRedis(event, payload);
       return;
     } catch (err) {
       console.error("[stats] Redis write failed, falling back to in-memory for this event:", err.message || err);
-      // fall through to in-memory so a transient Redis hiccup never breaks analyze/feedback requests
     }
   }
   recordEventMemory(event, payload);
 }
 
 export async function getStats() {
-  if (REDIS_ENABLED) {
+  if (SUPABASE_ENABLED) {
+    try {
+      return await getStatsSupabase();
+    } catch (err) {
+      console.error("[stats] Supabase read failed, falling back to in-memory:", err.message || err);
+    }
+  } else if (REDIS_ENABLED) {
     try {
       return await getStatsRedis();
     } catch (err) {
