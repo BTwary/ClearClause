@@ -112,8 +112,8 @@ async function load(){
     content.innerHTML = html;
 
     const persistenceNote = document.getElementById('persistenceNote');
-    if(d.persistence === 'redis'){
-      persistenceNote.innerHTML = '<p class="loading" style="color:var(--green);">✓ Backed by Redis — durable across requests and cold starts.</p>';
+    if(d.persistence === 'supabase' || d.persistence === 'redis'){
+      persistenceNote.innerHTML = '<p class="loading" style="color:var(--green);">✓ ' + escapeHtml(d.note || 'Backed by a persistent database.') + '</p>';
     } else {
       persistenceNote.innerHTML = '<p class="loading" style="color:var(--red);">⚠ Running in-memory (not durable). ' + escapeHtml(d.note || '') + '</p>';
     }
