@@ -358,6 +358,10 @@
     max-width:760px;margin:0 auto;padding:30px 24px 60px;
     font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);
   }
+  .footer-links{margin-top:10px;display:flex;gap:10px;align-items:center;}
+  .footer-links a{color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;}
+  .footer-links a:hover{color:var(--red);}
+  .footer-links span{color:var(--rule);}
 </style>
 </head>
 <body>
@@ -441,7 +445,10 @@
   </div>
 </div>
 
-<footer>ClearClause — plain-language contract review. Built as a v1 tool: no accounts, no storage, no uploads yet.</footer>
+<footer>
+  ClearClause — plain-language contract review. Built as a v1 tool: no accounts, no storage, no uploads yet.
+  <div class="footer-links"><a href="/privacy.html">Privacy Policy</a><span>·</span><a href="/faq.html">FAQ</a></div>
+</footer>
 
 <script>
 const examples = {

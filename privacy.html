@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — ClearClause</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F3EC; --paper-dark:#EDE8DB; --ink:#211E1B; --ink-soft:#4A453E;
+    --muted:#8A8377; --rule:#D8D0BF; --red:#B23A2E; --red-soft:#F3E3DF;
+    --gold:#9A7B3F; --green:#4B6B4F; --green-soft:#E7EDE3; --amber:#9C6B1F; --amber-soft:#F3E9D6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--red-soft);}
+  .wrap{max-width:680px;margin:0 auto;padding:0 24px 100px;}
+  @media (max-width:600px){.wrap{padding:0 16px 80px;}}
+  .back{
+    display:inline-flex;align-items:center;gap:8px;margin-top:40px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--red);text-decoration:none;
+  }
+  .back:hover{text-decoration:underline;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--red);display:flex;align-items:center;gap:10px;margin:28px 0 16px;
+  }
+  .eyebrow::before{content:"";width:22px;height:1px;background:var(--red);}
+  h1{
+    font-family:'Source Serif 4',serif;font-weight:700;font-size:clamp(30px,5vw,42px);
+    line-height:1.1;margin:0 0 8px;letter-spacing:-0.01em;
+  }
+  .updated{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:36px;
+  }
+  h2{
+    font-family:'Source Serif 4',serif;font-size:21px;margin:40px 0 12px;
+    border-bottom:1px solid var(--rule);padding-bottom:8px;
+  }
+  p, li{font-size:15.5px;line-height:1.75;color:var(--ink-soft);}
+  ul{padding-left:22px;}
+  li{margin-bottom:8px;}
+  strong{color:var(--ink);}
+  .callout{
+    background:var(--green-soft);border-left:3px solid var(--green);
+    padding:16px 18px;margin:24px 0;font-size:14.5px;line-height:1.7;color:#2f472f;
+  }
+  footer{
+    max-width:680px;margin:0 auto;padding:30px 24px 60px;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);
+  }
+  .footer-links{margin-top:10px;display:flex;gap:10px;align-items:center;}
+  .footer-links a{color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;}
+  .footer-links a:hover{color:var(--red);}
+  .footer-links span{color:var(--rule);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back" href="/">← Back to ClearClause</a>
+  <div class="eyebrow">ClearClause</div>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated July 2, 2026</div>
+
+  <div class="callout">
+    <strong>The short version:</strong> we do not store the documents you paste. Your text is sent securely to an AI model (Google Gemini) for analysis and discarded immediately after. We don't require an account, and we don't collect anything that identifies you personally.
+  </div>
+
+  <h2>What we do with your document text</h2>
+  <p>When you paste a document and click "Explain my contract," the text is sent from your browser to our server, which forwards it to Google's Gemini API for analysis. The response is returned to your browser and rendered on the page. We do not write the document text to a database, log file, or any persistent storage on our end.</p>
+  <p>Because the analysis is powered by Gemini's free tier, Google's own terms may allow that request content to be used to improve their models. If you're pasting something sensitive, consider removing names, account numbers, or other identifying details first, or wait until we move to a billed tier with stricter data-use terms (we'll update this page if that changes).</p>
+
+  <h2>What we do collect</h2>
+  <p>We keep lightweight, aggregate usage statistics so we can understand how the tool is being used and improve it. This includes things like:</p>
+  <ul>
+    <li>The number of analyses run</li>
+    <li>Which document types are most common (e.g. "Residential Lease," "Freelance Contract")</li>
+    <li>Average document length</li>
+    <li>Error and rate-limit rates</li>
+  </ul>
+  <p>None of this includes your document text, your name, or any other personal identifier. We can't tell which analysis belonged to which visitor.</p>
+
+  <h2>IP addresses</h2>
+  <p>Your IP address is used momentarily, in memory, to enforce a rate limit (so one visitor can't overwhelm the service) and is not stored or logged alongside your document text.</p>
+
+  <h2>Cookies and tracking</h2>
+  <p>We don't use advertising or cross-site tracking cookies. We don't run third-party analytics scripts that build a profile of you across other sites.</p>
+
+  <h2>Is this legal advice?</h2>
+  <p>No. ClearClause is an AI tool that flags things worth a closer look — it isn't a lawyer and doesn't provide legal advice. For anything with real consequences, have a licensed attorney review the document.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If how we handle data changes — for example, if we introduce accounts or move to a paid AI tier with different data-use terms — we'll update this page.</p>
+
+  <h2>Questions</h2>
+  <p>See the <a href="/faq.html" style="color:var(--red);">FAQ</a> for more, or reach out through the feedback link on the main page.</p>
+</div>
+
+<footer>
+  ClearClause — plain-language contract review.
+  <div class="footer-links"><a href="/">Home</a><span>·</span><a href="/faq.html">FAQ</a></div>
+</footer>
+
+</body>
+</html>

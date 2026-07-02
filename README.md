@@ -4,6 +4,21 @@ Plain-language contract/lease/ToS analyzer. Frontend is a single static
 `index.html`; the AI call is proxied through `/api/analyze.js` so your API
 key never touches the browser.
 
+Also included:
+- `privacy.html` — a Privacy Policy page (linked from the footer)
+- `faq.html` — an FAQ page answering the questions people ask before
+  trusting a tool like this with a real document (linked from the footer)
+- `stats.html` + `/api/stats` — a lightweight, privacy-respecting usage
+  dashboard (total analyses, top document types, average document length,
+  error/rate-limit rates, completion rate). It's intentionally not linked
+  from the public nav — visit it directly at `/stats.html` once deployed.
+  **Read the note at the top of `api/_stats.js` before relying on it**: the
+  counters live in serverless-instance memory, so they reset on cold start
+  and aren't a durable all-time total. It's fine for a rough signal during
+  early usage; swap in a persistent store (Vercel KV, Postgres, etc.) behind
+  the same `recordEvent()` / `getStats()` functions if you need real
+  reporting later.
+
 ## 1. Get a free Gemini API key
 
 1. Go to https://aistudio.google.com/apikey

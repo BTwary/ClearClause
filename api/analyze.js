@@ -3,6 +3,7 @@
 // GEMINI_API_KEY. It is never sent to or exposed in the browser.
 
 import { jsonrepair } from "jsonrepair";
+import { recordEvent } from "./_stats.js";
 
 const GEMINI_MODEL = "gemini-3.5-flash"; // current free-tier-eligible Gemini model as of mid-2026;
                                           // re-check https://ai.google.dev/gemini-api/docs/pricing
@@ -35,12 +36,11 @@ List up to 5 red flags, ordered by severity (high first). The "clause" field for
 If the pasted text is empty, nonsensical, far too short to be a real document, or clearly not a contract/lease/terms-of-service (e.g. it's a poem, a recipe, random text), instead respond with ONLY:
 { "isDocument": false, "reason": "one short plain sentence explaining why this doesn't look like a document ClearClause can analyze" }`;
 
-// Very lightweight in-memory rate limit: 5 requests per minute per IP.
-// NOTE: this resets whenever the serverless function cold-starts, and isn't
-// shared across concurrent instances — it's a cheap speed bump to stop
-// someone accidentally hammering your free Gemini quota, not real
-// production rate limiting. For that, use Vercel's Edge Config / a real
-// store like Upstash Redis once you have traffic worth protecting.
+// Per-IP rate limit: 5 requests per minute per IP. Stops one visitor from
+// hammering the endpoint. Does NOT protect the shared Gemini free-tier
+// budget (10 requests/minute, project-wide) from many different visitors
+// each making one request in the same minute -- exactly the traffic shape
+// of a launch-day spike. See requestLog note below for its own limits.
 const requestLog = new Map();
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 1000;
@@ -53,24 +53,56 @@ function isRateLimited(ip) {
   return timestamps.length > RATE_LIMIT;
 }
 
+// Global soft-throttle: caps total calls to Gemini across ALL visitors at
+// 8/minute, just under the free tier's ~10/minute ceiling, so we hit our
+// own graceful "busy" message before Google's hard 429 -- and leave a
+// couple of requests of headroom for jitter/retries. This resets on cold
+// start and isn't shared across concurrent serverless instances, so it's a
+// smoothing measure, not a hard guarantee -- but it meaningfully reduces
+// how often visitors hit a raw Gemini rate-limit error during a spike.
+const GLOBAL_LIMIT_PER_MIN = 8;
+let globalWindowStart = Date.now();
+let globalWindowCount = 0;
+
+function isGloballyThrottled() {
+  const now = Date.now();
+  if (now - globalWindowStart > RATE_WINDOW_MS) {
+    globalWindowStart = now;
+    globalWindowCount = 0;
+  }
+  globalWindowCount++;
+  return globalWindowCount > GLOBAL_LIMIT_PER_MIN;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed." });
   }
 
+  recordEvent("request");
+
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
   if (isRateLimited(ip)) {
+    recordEvent("rate_limited");
     return res.status(429).json({
       error: "You're analyzing documents faster than the free tier allows. Wait about a minute and try again.",
+    });
+  }
+  if (isGloballyThrottled()) {
+    recordEvent("rate_limited");
+    return res.status(429).json({
+      error: "We're getting a lot of traffic right now. Wait about a minute and try again.",
     });
   }
 
   const { documentText } = req.body || {};
   if (!documentText || typeof documentText !== "string" || !documentText.trim()) {
+    recordEvent("error");
     return res.status(400).json({ error: "No document text was provided." });
   }
   if (documentText.trim().length < 100) {
+    recordEvent("error");
     return res.status(400).json({ error: "That's too short to be a real document — paste at least a few sentences." });
   }
 
@@ -81,6 +113,7 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    recordEvent("error");
     return res.status(500).json({
       error:
         "The server is missing GEMINI_API_KEY. Set it in your Vercel project's Environment Variables and redeploy.",
@@ -123,6 +156,7 @@ export default async function handler(req, res) {
       const detail = await geminiRes.text();
       // Surface rate-limit errors distinctly so the frontend can say something useful.
       const status = geminiRes.status === 429 ? 429 : 502;
+      recordEvent(status === 429 ? "rate_limited" : "error");
       return res.status(status).json({
         error:
           geminiRes.status === 429
@@ -148,6 +182,7 @@ export default async function handler(req, res) {
       console.error(
         `[analyze] empty text from Gemini. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} usage=${JSON.stringify(data?.usageMetadata)}`
       );
+      recordEvent("error");
       return res.status(502).json({
         error:
           finishReason === "SAFETY"
@@ -183,6 +218,7 @@ export default async function handler(req, res) {
         console.error(
           `[analyze] JSON.parse failed and jsonrepair could not recover it. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} raw length=${cleaned.length}\nraw text:\n${cleaned}`
         );
+        recordEvent("error");
         return res.status(502).json({
           error:
             finishReason === "MAX_TOKENS"
@@ -193,8 +229,18 @@ export default async function handler(req, res) {
       }
     }
 
+    if (parsed && parsed.isDocument === false) {
+      recordEvent("not_document");
+    } else {
+      recordEvent("completed", {
+        documentType: parsed?.documentType,
+        documentLength: truncated.length,
+      });
+    }
+
     return res.status(200).json(parsed);
   } catch (err) {
+    recordEvent("error");
     return res.status(500).json({ error: "Unexpected server error.", detail: String(err.message || err) });
   }
 }
