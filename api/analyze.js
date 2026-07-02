@@ -99,8 +99,19 @@ export default async function handler(req, res) {
           contents: [{ role: "user", parts: [{ text: truncated }] }],
           generationConfig: {
             responseMimeType: "application/json",
-            maxOutputTokens: 2000,
-            temperature: 0.3,
+            // Gemini 3.x models are "thinking" models: by default they spend an
+            // unpredictable number of tokens reasoning before writing the answer,
+            // and those thinking tokens are deducted from the SAME
+            // maxOutputTokens budget as the actual output. With no
+            // thinkingConfig and a tight token cap, the model can burn most/all
+            // of the budget on reasoning and get cut off mid-JSON
+            // (finishReason: MAX_TOKENS) -- which is what was causing
+            // "Couldn't parse the analysis" here. Keeping thinking low and
+            // giving plenty of headroom fixes it.
+            thinkingConfig: { thinkingLevel: "low" },
+            maxOutputTokens: 8000,
+            // temperature/top_p/top_k are no longer recommended for Gemini 3.x --
+            // Google tunes reasoning quality around the defaults, so we omit them.
           },
         }),
       }
@@ -121,23 +132,49 @@ export default async function handler(req, res) {
 
     const data = await geminiRes.json();
     const finishReason = data?.candidates?.[0]?.finishReason;
+    const thoughtsTokens = data?.usageMetadata?.thoughtsTokenCount;
+    // Defensively skip any part explicitly marked as a "thought" (reasoning)
+    // part rather than an answer part -- we don't request include_thoughts,
+    // so this shouldn't normally fire, but it costs nothing to be safe.
     const text =
-      data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
+      data?.candidates?.[0]?.content?.parts
+        ?.filter((p) => !p.thought)
+        ?.map((p) => p.text || "")
+        ?.join("") || "";
 
     if (!text) {
+      console.error(
+        `[analyze] empty text from Gemini. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} usage=${JSON.stringify(data?.usageMetadata)}`
+      );
       return res.status(502).json({
         error:
           finishReason === "SAFETY"
             ? "The document couldn't be analyzed — it may have tripped a safety filter."
+            : finishReason === "MAX_TOKENS"
+            ? "The analysis got cut off before it finished (ran out of tokens, often on internal reasoning). Try again or shorten the document."
             : "The analysis service returned an empty response.",
+        detail: `finishReason: ${finishReason || "unknown"}${thoughtsTokens ? `; thoughtsTokenCount: ${thoughtsTokens}` : ""}`,
       });
     }
 
+    // Gemini is asked for pure JSON via responseMimeType, but strip stray
+    // code fences defensively in case a model variant adds them anyway.
+    const cleaned = text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/, "").replace(/```\s*$/, "").trim();
+
     let parsed;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(cleaned);
     } catch (e) {
-      return res.status(502).json({ error: "Couldn't parse the analysis. Try again." });
+      console.error(
+        `[analyze] JSON.parse failed. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} raw length=${cleaned.length}\nraw text:\n${cleaned}`
+      );
+      return res.status(502).json({
+        error:
+          finishReason === "MAX_TOKENS"
+            ? "The analysis got cut off before it finished. Try a shorter document, or try again."
+            : "Couldn't parse the analysis. Try again.",
+        detail: `finishReason: ${finishReason || "unknown"}; raw start: ${cleaned.slice(0, 300)}`,
+      });
     }
 
     return res.status(200).json(parsed);
