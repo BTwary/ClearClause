@@ -80,17 +80,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed." });
   }
 
-  recordEvent("request");
+  await recordEvent("request");
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
   if (isRateLimited(ip)) {
-    recordEvent("rate_limited");
+    await recordEvent("rate_limited");
     return res.status(429).json({
       error: "You're analyzing documents faster than the free tier allows. Wait about a minute and try again.",
     });
   }
   if (isGloballyThrottled()) {
-    recordEvent("rate_limited");
+    await recordEvent("rate_limited");
     return res.status(429).json({
       error: "We're getting a lot of traffic right now. Wait about a minute and try again.",
     });
@@ -98,11 +98,11 @@ export default async function handler(req, res) {
 
   const { documentText } = req.body || {};
   if (!documentText || typeof documentText !== "string" || !documentText.trim()) {
-    recordEvent("error");
+    await recordEvent("error");
     return res.status(400).json({ error: "No document text was provided." });
   }
   if (documentText.trim().length < 100) {
-    recordEvent("error");
+    await recordEvent("error");
     return res.status(400).json({ error: "That's too short to be a real document — paste at least a few sentences." });
   }
 
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    recordEvent("error");
+    await recordEvent("error");
     return res.status(500).json({
       error:
         "The server is missing GEMINI_API_KEY. Set it in your Vercel project's Environment Variables and redeploy.",
@@ -156,7 +156,7 @@ export default async function handler(req, res) {
       const detail = await geminiRes.text();
       // Surface rate-limit errors distinctly so the frontend can say something useful.
       const status = geminiRes.status === 429 ? 429 : 502;
-      recordEvent(status === 429 ? "rate_limited" : "error");
+      await recordEvent(status === 429 ? "rate_limited" : "error");
       return res.status(status).json({
         error:
           geminiRes.status === 429
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
       console.error(
         `[analyze] empty text from Gemini. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} usage=${JSON.stringify(data?.usageMetadata)}`
       );
-      recordEvent("error");
+      await recordEvent("error");
       return res.status(502).json({
         error:
           finishReason === "SAFETY"
@@ -218,7 +218,7 @@ export default async function handler(req, res) {
         console.error(
           `[analyze] JSON.parse failed and jsonrepair could not recover it. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} raw length=${cleaned.length}\nraw text:\n${cleaned}`
         );
-        recordEvent("error");
+        await recordEvent("error");
         return res.status(502).json({
           error:
             finishReason === "MAX_TOKENS"
@@ -230,9 +230,9 @@ export default async function handler(req, res) {
     }
 
     if (parsed && parsed.isDocument === false) {
-      recordEvent("not_document");
+      await recordEvent("not_document");
     } else {
-      recordEvent("completed", {
+      await recordEvent("completed", {
         documentType: parsed?.documentType,
         documentLength: truncated.length,
       });
@@ -240,7 +240,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(parsed);
   } catch (err) {
-    recordEvent("error");
+    await recordEvent("error");
     return res.status(500).json({ error: "Unexpected server error.", detail: String(err.message || err) });
   }
 }

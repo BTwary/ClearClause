@@ -9,15 +9,32 @@ Also included:
 - `faq.html` — an FAQ page answering the questions people ask before
   trusting a tool like this with a real document (linked from the footer)
 - `stats.html` + `/api/stats` — a lightweight, privacy-respecting usage
-  dashboard (total analyses, top document types, average document length,
-  error/rate-limit rates, completion rate). It's intentionally not linked
-  from the public nav — visit it directly at `/stats.html` once deployed.
-  **Read the note at the top of `api/_stats.js` before relying on it**: the
-  counters live in serverless-instance memory, so they reset on cold start
-  and aren't a durable all-time total. It's fine for a rough signal during
-  early usage; swap in a persistent store (Vercel KV, Postgres, etc.) behind
-  the same `recordEvent()` / `getStats()` functions if you need real
-  reporting later.
+  dashboard (total analyses, successful analyses, top document types,
+  average document length, error/rate-limit rates, completion rate, and
+  yes/no feedback counts from the "Was this helpful?" buttons). It's
+  intentionally not linked from the public nav — visit it directly at
+  `/stats.html` once deployed.
+
+  **This needs Vercel KV to actually work in production.** `/api/analyze`,
+  `/api/feedback`, and `/api/stats` each run as separate, isolated
+  serverless functions on Vercel — they don't share in-memory state with
+  each other, even though they live in the same `/api` folder. Without a
+  shared store, a count recorded by `/api/analyze` is invisible to
+  `/api/stats`, which is why you'll see all-zero numbers on the dashboard
+  if you skip this step. To fix it:
+
+  1. In your Vercel project, go to **Storage → Create Database → KV**
+     (this provisions a small Upstash Redis instance for you).
+  2. Connect it to this project. Vercel will automatically add
+     `KV_REST_API_URL` and `KV_REST_API_TOKEN` as environment variables.
+  3. Redeploy. `/stats.html` will show "✓ Backed by Redis" once it's
+     picked up — no code changes needed, `api/_stats.js` detects the env
+     vars automatically.
+
+  Until you set that up, the app still works fine end-to-end (analysis,
+  feedback buttons, etc.) — it just falls back to in-memory counters on
+  `/stats.html`, which reset on cold start and won't stay in sync across
+  requests. The dashboard tells you which mode it's in.
 
 ## 1. Get a free Gemini API key
 

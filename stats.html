@@ -65,6 +65,7 @@
   </div>
 
   <div id="content"><p class="loading">Loading…</p></div>
+  <div id="persistenceNote" style="margin-top:24px;"></div>
   <button id="refreshBtn" type="button">Refresh</button>
 </div>
 
@@ -109,6 +110,13 @@ async function load(){
     }
 
     content.innerHTML = html;
+
+    const persistenceNote = document.getElementById('persistenceNote');
+    if(d.persistence === 'redis'){
+      persistenceNote.innerHTML = '<p class="loading" style="color:var(--green);">✓ Backed by Redis — durable across requests and cold starts.</p>';
+    } else {
+      persistenceNote.innerHTML = '<p class="loading" style="color:var(--red);">⚠ Running in-memory (not durable). ' + escapeHtml(d.note || '') + '</p>';
+    }
   }catch(err){
     content.innerHTML = '<p class="err">Couldn\'t load stats: ' + escapeHtml(err.message) + '</p>';
   }
