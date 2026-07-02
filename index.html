@@ -129,6 +129,14 @@
   .examples{
     display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;
   }
+.sample-heading{
+  margin-top:16px;
+  margin-bottom:8px;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12px;
+  letter-spacing:.04em;
+  color:var(--muted);
+}
   .chip{
     all:unset;cursor:pointer;
     font-family:'IBM Plex Mono',monospace;
@@ -380,11 +388,15 @@
       <button id="clearBtn" type="button">clear</button>
     </div>
     <textarea id="docInput" placeholder="Paste the full text of your lease, contract, or terms of service here..."></textarea>
-    <div class="examples">
-      <button class="chip" data-example="lease">Try a sample lease</button>
-      <button class="chip" data-example="freelance">Try a freelance contract</button>
-      <button class="chip" data-example="tos">Try a ToS excerpt</button>
+    <div class="sample-heading">
+    No document handy? Start with a sample:
     </div>
+
+<div class="examples">
+    <button class="chip" data-example="lease">Sample Lease</button>
+    <button class="chip" data-example="freelance">Sample Freelance Contract</button>
+    <button class="chip" data-example="tos">Sample Terms of Service</button>
+</div>
     <div class="action-row">
       <button class="analyze-btn" id="analyzeBtn">Explain my contract</button>
       <span class="status" id="statusText"></span>
