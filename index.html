@@ -144,6 +144,9 @@
     color:#7a6f62;   /* slightly lighter than your current text */
     line-height:1.4;
 }
+  .label{
+    opacity:.7;
+}
   .chip{
     all:unset;cursor:pointer;
     font-family:'IBM Plex Mono',monospace;
@@ -414,7 +417,9 @@
     <textarea id="docInput" placeholder="Paste the full text of your lease, contract, or terms of service here..."></textarea>
 
 <p class="input-note">
-    Current limit:<strong>1,800 characters</strong> (about one page). PDF upload and larger documents coming soon.
+    <span class="label">Current limit:</span>
+    <strong>1,800 characters</strong>
+    <span>(about one page). PDF upload and larger documents coming soon.</span>
 </p>
 
 <p class="examples-hint">✨ Want to see how it works? Try a sample document.</p>
