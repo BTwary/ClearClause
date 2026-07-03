@@ -5,10 +5,41 @@
 import { jsonrepair } from "jsonrepair";
 import { recordEvent } from "./_stats.js";
 
-const GEMINI_MODEL = "gemini-3.5-flash"; // current free-tier-eligible Gemini model as of mid-2026;
-                                          // re-check https://ai.google.dev/gemini-api/docs/pricing
-                                          // before launch, since Google adjusts free-tier
-                                          // model eligibility fairly often.
+// Tried in order. Each Gemini model has its OWN separate free-tier quota
+// (RPM/TPM/RPD), so if gemini-3.5-flash is exhausted for the day, the next
+// model in the chain has an untouched quota of its own.
+// Re-check https://ai.google.dev/gemini-api/docs/pricing before launch --
+// Google adjusts free-tier model eligibility fairly often.
+const MODEL_CHAIN = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
+
+async function callGemini(apiKey, systemPrompt, contents, generationConfig) {
+  let lastErr;
+  for (const model of MODEL_CHAIN) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents,
+            generationConfig,
+          }),
+        }
+      );
+      if (res.ok) return { res, model };
+      // Only move to the next model on a quota/server error. A 4xx that
+      // isn't a quota issue (e.g. bad request) will fail identically on
+      // every model in the chain, so don't waste calls retrying it.
+      if (res.status !== 429 && res.status < 500) return { res, model };
+      lastErr = { status: res.status, body: await res.text(), model };
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
+}
 
 const SYSTEM_PROMPT = `You are ClearClause, a plain-language contract analysis assistant. Given a pasted contract, lease, or terms-of-service document, respond with ONLY a raw JSON object (no markdown code fences, no preamble, no commentary) matching exactly this shape:
 
@@ -128,34 +159,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    const { res: geminiRes, model: modelUsed } = await callGemini(
+      apiKey,
+      SYSTEM_PROMPT,
+      [{ role: "user", parts: [{ text: truncated }] }],
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: [{ role: "user", parts: [{ text: truncated }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            // Gemini 3.x models are "thinking" models: by default they spend an
-            // unpredictable number of tokens reasoning before writing the answer,
-            // and those thinking tokens are deducted from the SAME
-            // maxOutputTokens budget as the actual output. With no
-            // thinkingConfig and a tight token cap, the model can burn most/all
-            // of the budget on reasoning and get cut off mid-JSON
-            // (finishReason: MAX_TOKENS) -- which is what was causing
-            // "Couldn't parse the analysis" here. Keeping thinking low and
-            // giving plenty of headroom fixes it.
-            thinkingConfig: { thinkingLevel: "low" },
-            maxOutputTokens: 8000,
-            // temperature/top_p/top_k are no longer recommended for Gemini 3.x --
-            // Google tunes reasoning quality around the defaults, so we omit them.
-          },
-        }),
+        responseMimeType: "application/json",
+        // Gemini 3.x models are "thinking" models: by default they spend an
+        // unpredictable number of tokens reasoning before writing the answer,
+        // and those thinking tokens are deducted from the SAME
+        // maxOutputTokens budget as the actual output. With no
+        // thinkingConfig and a tight token cap, the model can burn most/all
+        // of the budget on reasoning and get cut off mid-JSON
+        // (finishReason: MAX_TOKENS) -- which is what was causing
+        // "Couldn't parse the analysis" here. Keeping thinking low and
+        // giving plenty of headroom fixes it.
+        thinkingConfig: { thinkingLevel: "low" },
+        maxOutputTokens: 8000,
+        // temperature/top_p/top_k are no longer recommended for Gemini 3.x --
+        // Google tunes reasoning quality around the defaults, so we omit them.
       }
     );
 
@@ -167,7 +189,7 @@ export default async function handler(req, res) {
       // shape, etc.) is logged server-side only -- it should never reach the
       // browser. It's genuinely useful for debugging but meaningless (and
       // unprofessional-looking) to a visitor.
-      console.error(`[analyze] Gemini upstream error ${geminiRes.status}: ${rawDetail.slice(0, 1000)}`);
+      console.error(`[analyze] Gemini upstream error (model=${modelUsed}) ${geminiRes.status}: ${rawDetail.slice(0, 1000)}`);
 
       let retryAfterSeconds = null;
       if (status === 429) {
@@ -203,7 +225,7 @@ export default async function handler(req, res) {
 
     if (!text) {
       console.error(
-        `[analyze] empty text from Gemini. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} usage=${JSON.stringify(data?.usageMetadata)}`
+        `[analyze] empty text from Gemini (model=${modelUsed}). finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} usage=${JSON.stringify(data?.usageMetadata)}`
       );
       await recordEvent("error", { reason: "empty_response" });
       return res.status(502).json({
@@ -234,11 +256,11 @@ export default async function handler(req, res) {
       try {
         parsed = JSON.parse(jsonrepair(cleaned));
         console.warn(
-          `[analyze] strict JSON.parse failed but jsonrepair recovered it. finishReason=${finishReason}`
+          `[analyze] strict JSON.parse failed but jsonrepair recovered it. model=${modelUsed} finishReason=${finishReason}`
         );
       } catch (repairErr) {
         console.error(
-          `[analyze] JSON.parse failed and jsonrepair could not recover it. finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} raw length=${cleaned.length}\nraw text:\n${cleaned}`
+          `[analyze] JSON.parse failed and jsonrepair could not recover it. model=${modelUsed} finishReason=${finishReason} thoughtsTokenCount=${thoughtsTokens} raw length=${cleaned.length}\nraw text:\n${cleaned}`
         );
         await recordEvent("error", { reason: "json_parse_failed" });
         return res.status(502).json({
