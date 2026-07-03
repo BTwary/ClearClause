@@ -129,14 +129,6 @@
   .examples{
     display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;
   }
-.sample-heading{
-    margin-top:16px;
-    margin-bottom:10px;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:13px;
-    font-weight:500;
-    color:var(--ink-soft);
-}
   .chip{
     all:unset;cursor:pointer;
     font-family:'IBM Plex Mono',monospace;
@@ -388,15 +380,11 @@
       <button id="clearBtn" type="button">clear</button>
     </div>
     <textarea id="docInput" placeholder="Paste the full text of your lease, contract, or terms of service here..."></textarea>
-    <div class="sample-heading">
-    ✨ Just exploring? Try a sample document:
+    <div class="examples">
+      <button class="chip" data-example="lease">Try a sample lease</button>
+      <button class="chip" data-example="freelance">Try a freelance contract</button>
+      <button class="chip" data-example="tos">Try a ToS excerpt</button>
     </div>
-
-<div class="examples">
-    <button class="chip" data-example="lease">Sample Lease</button>
-    <button class="chip" data-example="freelance">Sample Freelance Contract</button>
-    <button class="chip" data-example="tos">Sample Terms of Service</button>
-</div>
     <div class="action-row">
       <button class="analyze-btn" id="analyzeBtn">Explain my contract</button>
       <span class="status" id="statusText"></span>
@@ -536,6 +524,14 @@ document.querySelectorAll('.chip').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     docInput.value = examples[btn.dataset.example];
     docInput.focus();
+    try {
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'sample_clicked', sampleType: btn.dataset.example }),
+        keepalive: true
+      }).catch(()=>{});
+    } catch(e) {}
   });
 });
 
@@ -562,6 +558,15 @@ analyzeBtn.addEventListener('click', async ()=>{
   }
 
   analyzeBtn.disabled = true;
+
+  try {
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'analysis_started' }),
+      keepalive: true
+    }).catch(()=>{});
+  } catch(e) {}
 
   const loadingStages = [
     'Detecting document type...',

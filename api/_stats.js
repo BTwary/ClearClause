@@ -83,6 +83,15 @@ const REDIS_ENABLED = !SUPABASE_ENABLED && Boolean(REDIS_URL && REDIS_TOKEN);
 
 const BACKEND = SUPABASE_ENABLED ? "supabase" : REDIS_ENABLED ? "redis" : "in-memory";
 
+// The three sample-document chips on the homepage (see index.html). Kept as
+// a fixed allowlist -- funnel counters below key off this list rather than
+// trusting whatever string the client sends, so a tampered request can't
+// write arbitrary keys into the stats store.
+const SAMPLE_TYPES = ["lease", "freelance", "tos"];
+function normalizeSampleType(t) {
+  return SAMPLE_TYPES.includes(t) ? t : "other";
+}
+
 // ---- Supabase backend ----
 
 function supabaseHeaders(extra = {}) {
@@ -119,6 +128,15 @@ async function recordEventSupabase(event, payload) {
   const calls = [supabaseRpc("clearclause_set_if_absent", { p_key: "windowStartedAt", p_value: Date.now() })];
 
   switch (event) {
+    case "visit":
+      calls.push(supabaseRpc("clearclause_incr", { p_key: "pageViews" }));
+      break;
+    case "sample_clicked":
+      calls.push(supabaseRpc("clearclause_incr", { p_key: `sampleClicks_${normalizeSampleType(payload.sampleType)}` }));
+      break;
+    case "analysis_started":
+      calls.push(supabaseRpc("clearclause_incr", { p_key: "analysisStarted" }));
+      break;
     case "request":
       calls.push(supabaseRpc("clearclause_incr", { p_key: "totalRequests" }));
       break;
@@ -159,8 +177,14 @@ async function getStatsSupabase() {
 
   const byKey = Object.fromEntries(statRows.map((r) => [r.key, Number(r.value) || 0]));
   const documentTypeCounts = Object.fromEntries(docTypeRows.map((r) => [r.doc_type, Number(r.count) || 0]));
+  const sampleClicks = Object.fromEntries(
+    [...SAMPLE_TYPES, "other"].map((t) => [t, byKey[`sampleClicks_${t}`] || 0])
+  );
 
   return buildStatsPayload({
+    pageViews: byKey.pageViews || 0,
+    sampleClicks,
+    analysisStarted: byKey.analysisStarted || 0,
     totalRequests: byKey.totalRequests || 0,
     completedAnalyses: byKey.completedAnalyses || 0,
     notDocumentCount: byKey.notDocumentCount || 0,
@@ -178,6 +202,8 @@ async function getStatsSupabase() {
 
 const KEY_PREFIX = "clearclause:stats:";
 const COUNTER_KEYS = {
+  pageViews: KEY_PREFIX + "pageViews",
+  analysisStarted: KEY_PREFIX + "analysisStarted",
   totalRequests: KEY_PREFIX + "totalRequests",
   completedAnalyses: KEY_PREFIX + "completedAnalyses",
   notDocumentCount: KEY_PREFIX + "notDocumentCount",
@@ -189,6 +215,7 @@ const COUNTER_KEYS = {
   windowStartedAt: KEY_PREFIX + "windowStartedAt",
 };
 const DOC_TYPES_HASH_KEY = KEY_PREFIX + "docTypes";
+const SAMPLE_CLICKS_HASH_KEY = KEY_PREFIX + "sampleClicks";
 
 async function redisPipeline(commands) {
   const res = await fetch(`${REDIS_URL}/pipeline`, {
@@ -211,6 +238,15 @@ async function ensureWindowStarted() {
 
 async function recordEventRedis(event, payload) {
   switch (event) {
+    case "visit":
+      await redisPipeline([["INCR", COUNTER_KEYS.pageViews]]);
+      break;
+    case "sample_clicked":
+      await redisPipeline([["HINCRBY", SAMPLE_CLICKS_HASH_KEY, normalizeSampleType(payload.sampleType), 1]]);
+      break;
+    case "analysis_started":
+      await redisPipeline([["INCR", COUNTER_KEYS.analysisStarted]]);
+      break;
     case "request":
       await redisPipeline([["INCR", COUNTER_KEYS.totalRequests]]);
       break;
@@ -247,6 +283,8 @@ async function recordEventRedis(event, payload) {
 
 async function getStatsRedis() {
   const [
+    pageViewsRes,
+    analysisStartedRes,
     totalRequestsRes,
     completedAnalysesRes,
     notDocumentCountRes,
@@ -257,7 +295,10 @@ async function getStatsRedis() {
     feedbackNoRes,
     windowStartedAtRes,
     docTypesRes,
+    sampleClicksRes,
   ] = await redisPipeline([
+    ["GET", COUNTER_KEYS.pageViews],
+    ["GET", COUNTER_KEYS.analysisStarted],
     ["GET", COUNTER_KEYS.totalRequests],
     ["GET", COUNTER_KEYS.completedAnalyses],
     ["GET", COUNTER_KEYS.notDocumentCount],
@@ -268,6 +309,7 @@ async function getStatsRedis() {
     ["GET", COUNTER_KEYS.feedbackNo],
     ["GET", COUNTER_KEYS.windowStartedAt],
     ["HGETALL", DOC_TYPES_HASH_KEY],
+    ["HGETALL", SAMPLE_CLICKS_HASH_KEY],
   ]);
 
   const toInt = (r) => parseInt(r?.result, 10) || 0;
@@ -278,7 +320,16 @@ async function getStatsRedis() {
     documentTypeCounts[docTypesFlat[i]] = parseInt(docTypesFlat[i + 1], 10) || 0;
   }
 
+  const sampleClicksFlat = sampleClicksRes?.result || [];
+  const sampleClicks = Object.fromEntries([...SAMPLE_TYPES, "other"].map((t) => [t, 0]));
+  for (let i = 0; i < sampleClicksFlat.length; i += 2) {
+    sampleClicks[sampleClicksFlat[i]] = parseInt(sampleClicksFlat[i + 1], 10) || 0;
+  }
+
   return buildStatsPayload({
+    pageViews: toInt(pageViewsRes),
+    sampleClicks,
+    analysisStarted: toInt(analysisStartedRes),
     totalRequests: toInt(totalRequestsRes),
     completedAnalyses: toInt(completedAnalysesRes),
     notDocumentCount: toInt(notDocumentCountRes),
@@ -295,6 +346,9 @@ async function getStatsRedis() {
 // ---- In-memory fallback (local dev, or before any backend is configured) ----
 
 const memoryStats = {
+  pageViews: 0,
+  analysisStarted: 0,
+  sampleClicks: Object.fromEntries([...SAMPLE_TYPES, "other"].map((t) => [t, 0])),
   totalRequests: 0,
   completedAnalyses: 0,
   notDocumentCount: 0,
@@ -309,6 +363,17 @@ const memoryStats = {
 
 function recordEventMemory(event, payload) {
   switch (event) {
+    case "visit":
+      memoryStats.pageViews++;
+      break;
+    case "sample_clicked": {
+      const t = normalizeSampleType(payload.sampleType);
+      memoryStats.sampleClicks[t] = (memoryStats.sampleClicks[t] || 0) + 1;
+      break;
+    }
+    case "analysis_started":
+      memoryStats.analysisStarted++;
+      break;
     case "request":
       memoryStats.totalRequests++;
       break;
@@ -346,6 +411,9 @@ function getStatsMemory() {
 // ---- Shared response shaping ----
 
 function buildStatsPayload({
+  pageViews,
+  sampleClicks,
+  analysisStarted,
   totalRequests,
   completedAnalyses,
   notDocumentCount,
@@ -364,6 +432,15 @@ function buildStatsPayload({
 
   const rate = (n) => (totalRequests ? +(n / totalRequests).toFixed(3) : null);
   const totalFeedback = feedbackYes + feedbackNo;
+  const sampleClicksTotal = Object.values(sampleClicks || {}).reduce((a, b) => a + b, 0);
+
+  // Funnel: Page View -> Sample/Analysis Started -> Analysis Completed -> Feedback.
+  // "analysisStarted" fires client-side the instant the button is clicked
+  // with valid-looking text, BEFORE the network request goes out -- so it
+  // can diverge from totalRequests (e.g. a request that never reaches the
+  // server due to a network error). Comparing the two tells you whether
+  // drop-off is happening before or after the request leaves the browser.
+  const div = (num, denom) => (denom ? +(num / denom).toFixed(3) : null);
 
   const notes = {
     supabase: "Backed by Supabase (Postgres) — durable across requests and cold starts.",
@@ -375,8 +452,25 @@ function buildStatsPayload({
   return {
     persistence: BACKEND,
     windowStartedAt: new Date(windowStartedAt).toISOString(),
+
+    // -- Funnel, top to bottom --
+    pageViews,
+    sampleClicks,
+    sampleClicksTotal,
+    analysisStarted,
     totalRequests,
     completedAnalyses,
+
+    // -- Funnel rates, each step relative to the one above it --
+    pageViewToSampleClickRate: div(sampleClicksTotal, pageViews),
+    pageViewToAnalysisStartedRate: div(analysisStarted, pageViews),
+    // Kept as "visitToAnalysisRate" for continuity with the existing
+    // stats.html label ("Visit → analysis rate"); this is page-view ->
+    // completed, the headline trust/understanding/effort number.
+    visitToAnalysisRate: div(completedAnalyses, pageViews),
+    analysisStartedToCompletedRate: div(completedAnalyses, analysisStarted),
+    analysisCompletedToFeedbackRate: div(totalFeedback, completedAnalyses),
+
     notDocumentCount,
     errors,
     rateLimitHits,

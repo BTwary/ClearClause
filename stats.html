@@ -81,12 +81,24 @@ async function load(){
     const pct = (n) => n === null || n === undefined ? '—' : Math.round(n * 100) + '%';
 
     let html = '';
+
+    // Five numbers tell almost the entire story; everything else is
+    // derivable from these, so only two headline rates are surfaced:
+    // visit->analysis (the trust/understanding/effort number) and
+    // request->success (the "is this a reliability problem?" number).
+    html += '<h2>Funnel</h2>';
     html += '<div class="grid">';
     html += cell('Page views', d.pageViews);
-    html += cell('Visit → analysis rate', pct(d.visitToAnalysisRate));
-    html += cell('Total requests (used)', d.totalRequests);
+    html += cell('Analysis started', d.analysisStarted);
+    html += cell('Requests sent', d.totalRequests);
     html += cell('Successful analyses', d.completedAnalyses);
-    html += cell('Completion rate', pct(d.completionRate));
+    html += cell('Feedback submitted', d.totalFeedback);
+    html += cell('Visit → analysis rate', pct(d.visitToAnalysisRate));
+    html += cell('Request → success rate', pct(d.completionRate));
+    html += '</div>';
+
+    html += '<h2>Analysis quality &amp; load</h2>';
+    html += '<div class="grid">';
     html += cell('Avg. document length', d.averageDocumentLength ? d.averageDocumentLength + ' chars' : '—');
     html += cell('Error rate', pct(d.errorRate));
     html += cell('Rate-limit hit rate', pct(d.rateLimitHitRate));
@@ -101,6 +113,17 @@ async function load(){
     html += cell('Total feedback', d.totalFeedback);
     html += cell('Satisfaction rate', pct(d.satisfactionRate));
     html += '</div>';
+
+    html += '<h2>Sample document clicks</h2>';
+    if(!d.sampleClicks || d.sampleClicksTotal === 0){
+      html += '<p class="loading">No sample chips clicked yet.</p>';
+    } else {
+      html += '<table>' + Object.entries(d.sampleClicks)
+        .filter(([, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([type, count]) => '<tr><td>' + escapeHtml(type) + '</td><td>' + count + '</td></tr>')
+        .join('') + '</table>';
+    }
 
     html += '<h2>Top document types</h2>';
     if(!d.topDocumentTypes || d.topDocumentTypes.length === 0){
