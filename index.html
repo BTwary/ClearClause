@@ -68,6 +68,31 @@
   .topnav-cta:hover{background:var(--red);color:var(--paper) !important;}
 
   /* ---------- hero CTAs ---------- */
+  .trust-row{
+
+display:flex;
+
+gap:22px;
+
+flex-wrap:wrap;
+
+margin-top:20px;
+
+font-size:13px;
+
+color:var(--ink-soft);
+
+}
+
+.trust-row div{
+
+display:flex;
+
+gap:8px;
+
+align-items:center;
+
+}
   .hero-cta-row{display:flex;flex-wrap:wrap;gap:14px;margin:22px 0 26px;}
   .cta-primary{
     all:unset;cursor:pointer;box-sizing:border-box;
@@ -239,7 +264,19 @@
     transition:.15s;
     position:relative;
   }
-  .chip:hover{border-color:var(--ink);background:#FBF8F1;transform:translateY(-1px);}
+  .chip{
+
+transition:.2s ease;
+
+}
+
+.chip:hover{
+
+transform:translateY(-4px);
+
+box-shadow:0 8px 20px rgba(0,0,0,.05);
+
+}
   .chip:hover .chip-go{color:var(--red);}
   .chip-kind{
     font-family:'IBM Plex Mono',monospace;
@@ -280,7 +317,21 @@
     border-radius:2px;
     transition:.15s;
   }
-  .analyze-btn:hover{background:var(--red);}
+  .analyze-btn{
+
+transition:.2s ease;
+
+}
+
+.analyze-btn:hover{
+
+background:var(--red);
+
+transform:translateY(-2px);
+
+box-shadow:0 10px 20px rgba(0,0,0,.08);
+
+}
   .analyze-btn:disabled{background:var(--muted);cursor:not-allowed;}
   .status{
     font-family:'IBM Plex Mono',monospace;
@@ -490,7 +541,9 @@
 
   /* ---------- how it works (video + steps) ---------- */
   .hiw-section{
-    padding:44px 0 8px;
+    padding:72px 0 48px;
+    border-top:1px solid var(--rule);
+    margin-top:40px;
   }
   .hiw-section h2{
     font-family:'Source Serif 4',serif;font-weight:700;
@@ -503,18 +556,20 @@
   }
   .hiw-grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:44px;
+    grid-template-columns: minmax(0, 58%) minmax(320px, 42%);
+    gap:56px;
     align-items:center;
-    margin-top:32px;
+    margin-top:40px;
   }
   .hiw-video{
     position:relative;
     width:100%;
     aspect-ratio:16/9;
     border:1px solid var(--rule);
-    border-radius:8px;
-    box-shadow:4px 4px 0 var(--rule);
+    border-radius:12px;
+    box-shadow:
+4px 4px 0 var(--rule),
+0 10px 30px rgba(0,0,0,.05);
     background:var(--paper-dark);
     overflow:hidden;
   }
@@ -533,12 +588,25 @@
     gap:16px;
     align-items:flex-start;
   }
+  .hiw-step{
+
+transition:.25s ease;
+
+}
+
+.hiw-step:hover{
+
+transform:translateX(6px);
+
+}
   .hiw-step-num{
     flex:0 0 auto;
     font-family:'IBM Plex Mono',monospace;
     font-size:13px;font-weight:600;letter-spacing:.04em;
     color:var(--red);
-    border:1px solid var(--red);
+    border:2px solid var(--red);
+background:#fff;
+box-shadow:2px 2px 0 rgba(0,0,0,.04);
     border-radius:20px;
     width:34px;height:34px;
     display:flex;align-items:center;justify-content:center;
@@ -573,6 +641,31 @@
   .footer-links a{color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;}
   .footer-links a:hover{color:var(--red);}
   .footer-links span{color:var(--rule);}
+  .browser-bar{
+display:flex;
+align-items:center;
+padding:10px 14px;
+background:#27231f;
+border-bottom:1px solid rgba(255,255,255,.08);
+gap:8px;
+}
+
+.dot{
+width:10px;
+height:10px;
+border-radius:50%;
+}
+
+.red{background:#ff605c;}
+.yellow{background:#ffbd44;}
+.green{background:#00ca4e;}
+
+.browser-title{
+margin-left:10px;
+font-size:11px;
+font-family:'IBM Plex Mono',monospace;
+color:#bbb;
+}
 </style>
 </head>
 <body>
@@ -580,9 +673,8 @@
 <nav class="topnav">
   <a href="/" class="topnav-brand">ClearClause</a>
   <div class="topnav-links">
-    <a href="/contact.html">Contact Us</a>
     <a href="/feedback.html">Give Feedback</a>
-    <a href="/waitlist.html" class="topnav-cta">Join the Waitlist</a>
+    <a href="/waitlist.html" class="topnav-cta">Get Early Access</a>
   </div>
 </nav>
 
@@ -590,10 +682,27 @@
   <div class="hero">
     <div class="eyebrow">ClearClause</div>
     <h1>Know what you're<br><em>actually</em> signing.</h1>
-    <p class="lede">Paste any lease, contract, or terms of service. Get a plain-English summary, key risks, and important obligations before you sign.</p>
+    <p class="lede">Understand contracts in plain English.
+
+Identify risks before you sign.</p>
     <div class="hero-cta-row">
-      <a href="#desk" class="cta-primary">Try AI Contract Review</a>
-      <a href="/waitlist.html" class="cta-secondary">Join the Waitlist</a>
+      <div class="trust-row">
+
+<div>
+🔒 Nothing stored
+</div>
+
+<div>
+⚡ AI review in seconds
+</div>
+
+<div>
+✓ No signup required
+</div>
+
+</div>
+      <a href="#desk" class="cta-primary">Analyze Contract</a>
+      <a href="/waitlist.html" class="cta-secondary">Get Early Access</a>
     </div>
     <div class="fine"><strong>Not legal advice.</strong> This tool flags things worth a closer look — it doesn't replace a lawyer. <strong>We do not store your documents.</strong> The text is sent securely to an AI model for analysis and discarded after processing.</div>
     <div class="how-it-works">
@@ -604,22 +713,30 @@
   </div>
 
   <div class="hiw-section">
-    <div class="eyebrow">See It In Action</div>
     <h2>How It Works</h2>
-    <p class="hiw-subtitle">Understand contracts in four simple steps.</p>
+
+<p class="hiw-subtitle">
+Paste your contract. Get an AI-powered review in seconds.
+</p>
     <div class="hiw-grid">
       <div class="hiw-video">
-        <video
-          id="hiwVideo"
-          src="/assets/how-it-works.mp4"
-          poster="/assets/how-it-works-poster.jpg"
-          autoplay
-          muted
-          loop
-          playsinline
-          preload="metadata"
-        ></video>
-      </div>
+
+<div class="browser-bar">
+<div class="dot red"></div>
+<div class="dot yellow"></div>
+<div class="dot green"></div>
+
+<div class="browser-title">
+clearclause.ai
+</div>
+</div>
+
+<video
+id="hiwVideo"
+...
+></video>
+
+</div>
       <div class="hiw-steps">
         <div class="hiw-step">
           <div class="hiw-step-num">01</div>
@@ -666,17 +783,17 @@
     <p class="examples-hint">✨ Want to see how it works? Try a sample document.</p>
     <div class="examples">
       <button class="chip" data-example="lease">
-        <div class="chip-kind">Residential lease</div>
+        <div class="chip-kind">📄 Residential Lease</div>
         <div class="chip-title">Apartment lease agreement</div>
         <div class="chip-go">Try sample →</div>
       </button>
       <button class="chip" data-example="freelance">
-        <div class="chip-kind">Contractor agreement</div>
+        <div class="chip-kind">📑 Contractor Agreement</div>
         <div class="chip-title">Freelance design contract</div>
         <div class="chip-go">Try sample →</div>
       </button>
       <button class="chip" data-example="tos">
-        <div class="chip-kind">Terms of service</div>
+        <div class="chip-kind">📜 Terms of Service</div>
         <div class="chip-title">App ToS excerpt</div>
         <div class="chip-go">Try sample →</div>
       </button>
@@ -760,10 +877,21 @@
 
   <div class="shape-future">
     <div class="eyebrow">Get Involved</div>
+    <h3>Coming Soon</h3>
+
+✓ Better summaries
+
+✓ Risk scoring
+
+🚧 PDF upload
+
+🚧 Browser extension
+
+🚧 Team workspace
     <h2>Help Shape the Future of ClearClause</h2>
-    <p>ClearClause is continuously evolving. Join our waitlist for early access to upcoming features, or share your feedback to help us build a better AI-powered contract review platform.</p>
+    <p>ClearClause is continuously evolving. Get early access to upcoming features, or share your feedback to help us build a better AI-powered contract review platform.</p>
     <div class="shape-future-btns">
-      <a href="/waitlist.html" class="cta-primary">Join the Waitlist</a>
+      <a href="/waitlist.html" class="cta-primary">Get Early Access</a>
       <a href="/contact.html" class="cta-secondary">Contact Us</a>
       <a href="/feedback.html" class="cta-secondary">Give Feedback</a>
     </div>
@@ -772,7 +900,41 @@
 
 <footer>
   ClearClause — plain-language contract review. No account needed. Nothing you paste is stored.
-  <div class="footer-links"><a href="/faq.html">FAQ</a><span>·</span><a href="/contact.html">Contact Us</a><span>·</span><a href="/waitlist.html">Join Waitlist</a><span>·</span><a href="/feedback.html">Give Feedback</a><span>·</span><a href="/privacy.html">Privacy Policy</a><span>·</span><a href="/terms.html">Terms of Service</a></div>
+  <div class="footer-grid">
+
+<div>
+
+<h4>Product</h4>
+
+FAQ
+
+Privacy
+
+Terms
+
+</div>
+
+<div>
+
+<h4>Company</h4>
+
+Contact
+
+Feedback
+
+GitHub
+
+</div>
+
+<div>
+
+<h4>Community</h4>
+
+Early Access
+
+</div>
+
+</div>
 </footer>
 
 <script>
