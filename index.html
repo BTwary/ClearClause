@@ -69,19 +69,14 @@
 
   /* ---------- hero CTAs ---------- */
   .trust-row{
-
 display:flex;
-
+align-items:center;
 gap:22px;
-
 flex-wrap:wrap;
-
-margin-top:20px;
-
+margin-top:18px;
+margin-bottom:22px;
 font-size:13px;
-
 color:var(--ink-soft);
-
 }
 
 .trust-row div{
@@ -93,7 +88,13 @@ gap:8px;
 align-items:center;
 
 }
-  .hero-cta-row{display:flex;flex-wrap:wrap;gap:14px;margin:22px 0 26px;}
+  .hero-cta-row{
+display:flex;
+align-items:center;
+gap:16px;
+margin-top:22px;
+flex-wrap:wrap;
+}
   .cta-primary{
     all:unset;cursor:pointer;box-sizing:border-box;
     font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;
@@ -687,23 +688,20 @@ color:#bbb;
 Identify risks before you sign.</p>
     <div class="hero-cta-row">
       <div class="trust-row">
-
-<div>
-🔒 Nothing stored
+    <div>🔒 Nothing stored</div>
+    <div>⚡ AI review in seconds</div>
+    <div>✓ No signup required</div>
 </div>
 
-<div>
-⚡ AI review in seconds
-</div>
+<div class="hero-cta-row">
+    <a href="#desk" class="cta-primary">
+        Analyze Contract
+    </a>
 
-<div>
-✓ No signup required
+    <a href="/waitlist.html" class="cta-secondary">
+        Get Early Access
+    </a>
 </div>
-
-</div>
-      <a href="#desk" class="cta-primary">Analyze Contract</a>
-      <a href="/waitlist.html" class="cta-secondary">Get Early Access</a>
-    </div>
     <div class="fine"><strong>Not legal advice.</strong> This tool flags things worth a closer look — it doesn't replace a lawyer. <strong>We do not store your documents.</strong> The text is sent securely to an AI model for analysis and discarded after processing.</div>
     <div class="how-it-works">
       <span class="step">1. You paste text (up to 18,000 characters)</span><span class="arrow">→</span>
@@ -732,9 +730,17 @@ clearclause.ai
 </div>
 
 <video
-id="hiwVideo"
-...
-></video>
+    id="hiwVideo"
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="metadata"
+    poster="/assets/how-it-works-poster.jpg"
+>
+    <source src="/assets/how-it-works.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
 
 </div>
       <div class="hiw-steps">
