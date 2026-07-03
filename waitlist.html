@@ -197,6 +197,7 @@
   <div class="fine"><strong>No spam.</strong> We'll only email you about ClearClause product updates and early access — nothing else.</div>
 
   <form id="waitlistForm" novalidate>
+    <input type="text" id="website" name="website" autocomplete="off" tabindex="-1" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true">
     <div class="form-grid">
       <div class="field">
         <label for="fullName">Full Name <span class="req">*</span></label>
@@ -264,11 +265,11 @@
 
 <script>
 (function(){
-  // ---- Backend: Formspree ----
-  // 1. Create a free account at https://formspree.io (free tier: 50 submissions/month, no server needed).
-  // 2. Create a new form for the waitlist and copy its endpoint, e.g. https://formspree.io/f/abcdwxyz
-  // 3. Paste it below. That's the entire backend setup — no API keys touch the browser.
-  const FORMSPREE_ENDPOINT = "https://formspree.io/f/YOUR_WAITLIST_FORM_ID";
+  // ---- Backend: your own Supabase-backed endpoint ----
+  // Submissions go to /api/waitlist, which stores them in the
+  // clearclause_waitlist Supabase table (see api/_supabase.js for setup --
+  // reuses the same SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY as stats.html).
+  const SUBMIT_ENDPOINT = "/api/waitlist";
 
   const form = document.getElementById("waitlistForm");
   const submitBtn = document.getElementById("submitBtn");
@@ -348,12 +349,6 @@
       return;
     }
 
-    if(FORMSPREE_ENDPOINT.indexOf("YOUR_WAITLIST_FORM_ID") !== -1){
-      errorBox.textContent = "This form isn't connected yet — replace FORMSPREE_ENDPOINT in waitlist.html with your Formspree form URL.";
-      errorBox.classList.add("show");
-      return;
-    }
-
     const payload = {
       fullName: document.getElementById("fullName").value.trim(),
       workEmail: document.getElementById("workEmail").value.trim(),
@@ -361,32 +356,29 @@
       jobTitle: document.getElementById("jobTitle").value.trim(),
       useCase: document.getElementById("useCase").value,
       message: document.getElementById("message").value.trim(),
-      _subject: "New ClearClause waitlist signup"
+      website: document.getElementById("website") ? document.getElementById("website").value : "" // honeypot
     };
 
     setLoading(true);
 
-    fetch(FORMSPREE_ENDPOINT, {
+    fetch(SUBMIT_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     })
       .then(function(res){
-        if(res.ok){
-          form.reset();
-          clearAllErrors();
-          form.style.display = "none";
-          successPanel.classList.add("show");
-          requestAnimationFrame(function(){ successPanel.classList.add("in"); });
-          statusText.textContent = "";
-        } else {
-          return res.json().catch(function(){ return null; }).then(function(data){
-            const detail = data && data.errors && data.errors.length
-              ? data.errors.map(function(er){ return er.message; }).join(" ")
-              : "Something went wrong joining the waitlist.";
-            throw new Error(detail);
-          });
-        }
+        return res.json().catch(function(){ return null; }).then(function(data){
+          if(res.ok){
+            form.reset();
+            clearAllErrors();
+            form.style.display = "none";
+            successPanel.classList.add("show");
+            requestAnimationFrame(function(){ successPanel.classList.add("in"); });
+            statusText.textContent = "";
+          } else {
+            throw new Error((data && data.error) || "Something went wrong joining the waitlist.");
+          }
+        });
       })
       .catch(function(err){
         errorBox.textContent = (err && err.message) ? err.message : "Something went wrong. Please try again, or email us directly.";
