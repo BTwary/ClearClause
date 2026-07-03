@@ -581,17 +581,35 @@
 </footer>
 
 <script>
+  // Enable developer mode by visiting ?dev once
+if (new URLSearchParams(window.location.search).has("dev")) {
+  localStorage.setItem("developer", "1");
+  console.log("Developer mode enabled");
+}
+
+// Disable it with ?nodev
+if (new URLSearchParams(window.location.search).has("nodev")) {
+  localStorage.removeItem("developer");
+  console.log("Developer mode disabled");
+}
 // Fire-and-forget page view ping for /stats.html. No cookies, no IDs --
 // this just increments a counter server-side (see api/visit.js). Wrapped
 // defensively so an ad-blocker or a failed request never breaks the page.
 try {
-  if (navigator.sendBeacon) {
-    navigator.sendBeacon("/api/visit", new Blob([], { type: "text/plain" }));
-  } else {
-    fetch("/api/visit", { method: "POST", keepalive: true }).catch(() => {});
+  if (localStorage.getItem("developer") !== "1") {
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/visit", new Blob([], { type: "text/plain" }));
+    } else {
+      fetch("/api/visit", {
+        method: "POST",
+        keepalive: true
+      }).catch(() => {});
+    }
+
   }
 } catch (e) {
-  // Ignore -- a page view counter is never worth breaking the app for.
+  // Ignore
 }
 
 const examples = {
