@@ -236,32 +236,104 @@ List up to 5 red flags, ordered by severity (high first). The "clause" field for
 If the pasted text is empty, nonsensical, far too short to be a real document, or clearly not a contract/lease/terms-of-service (e.g. it's a poem, a recipe, random text), instead respond with ONLY:
 { "isDocument": false, "reason": "one short plain sentence explaining why this doesn't look like a document ClearClause can analyze" }`;
 
-// Per-IP rate limit: 6 requests per minute per IP. Stops one visitor from
-// hammering the endpoint. Was 5 -- raised slightly because during solo
-// testing/iteration a handful of legitimate clicks in one minute was
-// tripping this before any real traffic was involved. Still well under
-// the global cap below, so it doesn't weaken protection against a single
-// IP hogging the shared free-tier budget when multiple people are visiting.
-const requestLog = new Map();
-const RATE_LIMIT = 6;
+// Used for documents too large for a single call (see SINGLE_CALL_LIMIT on
+// the client). Each chunk is analyzed independently -- the model only ever
+// sees one section, never the whole document -- and results are merged
+// client-side before a final, cheap SYNTHESIS_SYSTEM_PROMPT call turns the
+// merged findings into the same shape SYSTEM_PROMPT would have produced.
+// This keeps per-call token cost bounded regardless of total document size,
+// instead of truncating long documents or sending everything in one huge
+// (expensive, context-risking) call.
+const CHUNK_SYSTEM_PROMPT = `You are Trothix, analyzing ONE SECTION of a much larger contract. You are only shown this excerpt, not the full document -- do not assume anything about sections you can't see. Respond with ONLY a raw JSON object (no markdown, no preamble, no commentary) matching exactly this shape:
+
+{
+  "redFlags": [
+    { "clause": "an EXACT substring copied verbatim from THIS EXCERPT, under 12 words", "issue": "one plain-English sentence explaining why this is worth attention", "severity": "high" | "medium" | "low", "anchor": "a short unique slug for this flag" }
+  ],
+  "keyTerms": {
+    "duration": "only include this field if THIS EXCERPT specifies a term/duration, in plain language",
+    "payment": "only include this field if THIS EXCERPT specifies payment amount/terms, in plain language",
+    "termination": "only include this field if THIS EXCERPT specifies how/when this can be ended, in plain language",
+    "penalties": "only include this field if THIS EXCERPT specifies fees, penalties, or liability caps, in plain language"
+  },
+  "notableFacts": [ "up to 3 short plain-English facts about anything else important in this excerpt (obligations, definitions, unusual terms) that isn't already captured as a red flag" ]
+}
+
+List up to 4 red flags found in this excerpt, ordered by severity (high first). The "clause" field MUST be copied character-for-character from this excerpt. Omit any keyTerms field this excerpt doesn't actually mention -- don't guess or write "Not specified" here. Use cautious, non-definitive language ("may be unusual", "worth reviewing with a professional") and never declare anything "illegal" or "unenforceable." If this excerpt has no meaningful contract content (e.g. it's a signature block, table of contents, or blank boilerplate), respond with { "redFlags": [], "keyTerms": {}, "notableFacts": [] }.`;
+
+// Takes the merged output of many CHUNK_SYSTEM_PROMPT calls (small, already-
+// extracted findings -- not the original document text) and produces the
+// same final report shape SYSTEM_PROMPT does for a single-call document.
+// Because the input here is just structured findings, this call is cheap
+// regardless of how long the original document was.
+const SYNTHESIS_SYSTEM_PROMPT = `You are Trothix. A long contract has already been reviewed section-by-section, and the raw findings from every section are provided below as JSON. Your only job is to synthesize those findings into the final report -- do not invent clauses or facts beyond what's given. Respond with ONLY a raw JSON object (no markdown, no preamble, no commentary) matching exactly this shape:
+
+{
+  "isDocument": true,
+  "documentType": "short label like 'Residential Lease' or 'Freelance Contract', inferred from the findings",
+  "riskLevel": "high" | "medium" | "low",
+  "riskSummary": "one plain-English sentence explaining the overall risk level and who it favors",
+  "topPoints": [ "up to 3 short plain-English sentences, the most important things the reader should know before anything else" ],
+  "summary": "3-5 plain-English sentences: what this document is and what the reader is agreeing to, based on the findings",
+  "keyTerms": {
+    "duration": "term/duration in plain language, or 'Not specified'",
+    "payment": "payment amount and terms in plain language, or 'Not specified'",
+    "termination": "how/when this can be ended, or 'Not specified'",
+    "penalties": "fees, penalties, or liability caps, or 'Not specified'"
+  },
+  "redFlags": [
+    { "clause": "copy verbatim from the provided findings, unchanged", "issue": "copy or lightly tighten from the provided findings", "severity": "high" | "medium" | "low", "anchor": "copy from the provided findings" }
+  ],
+  "consequences": "2-4 plain-English sentences on what realistically happens if the reader breaks or fails to meet this agreement, based on the findings"
+}
+
+Select and reorder up to 5 red flags from the provided list, ordered by severity (high first) -- do not alter the "clause" text. If the findings are too sparse to determine a keyTerms field, use "Not specified". If the findings list is empty or has no real content, respond with { "isDocument": false, "reason": "one short plain sentence" } instead.`;
+
+// Rate limiting is job-aware, not request-aware, because one large document
+// now becomes many sub-requests (one per chunk, plus one synthesis call)
+// instead of one. Without this, a single big lease would burn through the
+// old per-request limit on its own before finishing.
+//
+// - RATE_LIMIT_JOBS: distinct analyses (documents) per IP per minute. This
+//   is the meaningful "how many documents is this visitor analyzing" limit,
+//   equivalent in spirit to the old flat per-request limit.
+// - RATE_LIMIT_SUBREQUESTS: hard ceiling on raw HTTP calls per IP per
+//   minute, mostly a defense against something other than the normal
+//   chunked-analysis flow hammering the endpoint directly.
+const jobLog = new Map(); // ip -> Map(jobId -> firstSeenTimestamp)
+const requestLog = new Map(); // ip -> [timestamps]
+const RATE_LIMIT_JOBS = 6;
+const RATE_LIMIT_SUBREQUESTS = 60;
 const RATE_WINDOW_MS = 60 * 1000;
 
-function isRateLimited(ip) {
+function isRateLimited(ip, jobId) {
   const now = Date.now();
+
   const timestamps = (requestLog.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
   timestamps.push(now);
   requestLog.set(ip, timestamps);
-  return timestamps.length > RATE_LIMIT;
+  if (timestamps.length > RATE_LIMIT_SUBREQUESTS) return true;
+
+  const jobs = jobLog.get(ip) || new Map();
+  for (const [id, ts] of jobs) {
+    if (now - ts > RATE_WINDOW_MS) jobs.delete(id);
+  }
+  const isNewJob = !jobs.has(jobId);
+  if (isNewJob) jobs.set(jobId, now);
+  jobLog.set(ip, jobs);
+
+  return jobs.size > RATE_LIMIT_JOBS;
 }
 
 // Global soft-throttle: caps total incoming requests across ALL visitors
-// at 8/minute. This was originally tuned just under Gemini's own
-// ~10/minute free-tier ceiling. Now that failed Gemini calls fall through
-// to Groq/OpenRouter instead of just erroring out, this number is worth
-// revisiting once you see real traffic -- it's throttling *incoming*
-// requests, not calls to any one provider, so it can likely go a bit
-// higher without any single provider getting hammered.
-const GLOBAL_LIMIT_PER_MIN = 8;
+// per minute. Raised from the original 8 because a single large document
+// can now legitimately produce 10+ sub-requests (one per chunk, plus one
+// synthesis call) instead of just 1. This is deliberately a request-count
+// throttle, not a per-document one -- that's what RATE_LIMIT_JOBS above is
+// for -- so it's worth re-tuning once you see real concurrent traffic,
+// since it's the thing standing between visitors and each provider's own
+// per-minute quota in MODEL_CHAIN.
+const GLOBAL_LIMIT_PER_MIN = 30;
 let globalWindowStart = Date.now();
 let globalWindowCount = 0;
 
@@ -284,7 +356,14 @@ export default async function handler(req, res) {
   await recordEvent("request");
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
-  if (isRateLimited(ip)) {
+  const { documentText, mode: rawMode, jobId: incomingJobId, chunkIndex, chunkCount, findings } = req.body || {};
+  const mode = rawMode === "chunk" || rawMode === "synthesize" ? rawMode : "full";
+  // Full-mode requests from older/simple callers won't send a jobId -- give
+  // each one its own so a single paste still counts as exactly one job,
+  // matching the original per-request behavior.
+  const jobId = typeof incomingJobId === "string" && incomingJobId ? incomingJobId : `${ip}-solo-${Date.now()}-${Math.random()}`;
+
+  if (isRateLimited(ip, jobId)) {
     await recordEvent("rate_limited");
     return res.status(429).json({
       error: "You're sending requests faster than allowed.",
@@ -299,20 +378,50 @@ export default async function handler(req, res) {
     });
   }
 
-  const { documentText } = req.body || {};
-  if (!documentText || typeof documentText !== "string" || !documentText.trim()) {
-    await recordEvent("error", { reason: "missing_document" });
-    return res.status(400).json({ error: "No document text was provided." });
-  }
-  if (documentText.trim().length < 100) {
-    await recordEvent("error", { reason: "too_short" });
-    return res.status(400).json({ error: "That's too short to be a real document — paste at least a few sentences." });
-  }
+  let systemPrompt, userText, loggedLength;
 
-  const truncated =
-    documentText.length > 18000
-      ? documentText.slice(0, 18000) + "\n\n[document truncated for length]"
-      : documentText;
+  if (mode === "synthesize") {
+    if (!findings || typeof findings !== "object") {
+      await recordEvent("error", { reason: "missing_findings" });
+      return res.status(400).json({ error: "No findings were provided to synthesize." });
+    }
+    systemPrompt = SYNTHESIS_SYSTEM_PROMPT;
+    userText = JSON.stringify(findings);
+    loggedLength = userText.length;
+  } else {
+    if (!documentText || typeof documentText !== "string" || !documentText.trim()) {
+      await recordEvent("error", { reason: "missing_document" });
+      return res.status(400).json({ error: "No document text was provided." });
+    }
+
+    if (mode === "chunk") {
+      // Chunks are section-sized (client targets ~14,000 chars), not whole
+      // documents -- a trailing chunk can legitimately be short, so there's
+      // no "too short to be a document" rejection here. There is still a
+      // hard ceiling so a misbehaving client can't send an oversized chunk.
+      if (documentText.length > 16000) {
+        await recordEvent("error", { reason: "chunk_too_large" });
+        return res.status(400).json({ error: "That section is too large to analyze in one piece." });
+      }
+      const idx = Number.isInteger(chunkIndex) ? chunkIndex : "?";
+      const total = Number.isInteger(chunkCount) ? chunkCount : "?";
+      systemPrompt = CHUNK_SYSTEM_PROMPT;
+      userText = `Section ${idx} of ${total}:\n\n${documentText}`;
+      loggedLength = documentText.length;
+    } else {
+      if (documentText.trim().length < 100) {
+        await recordEvent("error", { reason: "too_short" });
+        return res.status(400).json({ error: "That's too short to be a real document — paste at least a few sentences." });
+      }
+      const truncated =
+        documentText.length > 18000
+          ? documentText.slice(0, 18000) + "\n\n[document truncated for length]"
+          : documentText;
+      systemPrompt = SYSTEM_PROMPT;
+      userText = truncated;
+      loggedLength = truncated.length;
+    }
+  }
 
   const apiKeys = {
     gemini: process.env.GEMINI_API_KEY,
@@ -329,7 +438,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await callModelChain(apiKeys, SYSTEM_PROMPT, truncated);
+    const result = await callModelChain(apiKeys, systemPrompt, userText);
 
     if (!result || !result.ok) {
       const status = result?.status === 429 ? 429 : 502;
@@ -405,9 +514,10 @@ export default async function handler(req, res) {
     } else {
       await recordEvent("completed", {
         documentType: parsed?.documentType,
-        documentLength: truncated.length,
+        documentLength: loggedLength,
         provider: providerUsed,
         model: modelUsed,
+        mode,
       });
     }
 
