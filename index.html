@@ -1755,6 +1755,8 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
 });
 
 
+let parserWorker = new Worker('assets/js/engine/worker.js', { type: 'module' });
+
 analyzeBtn.addEventListener('click', async ()=>{
   const text = docInput.value.trim();
   errorBox.style.display = 'none';
@@ -1815,9 +1817,7 @@ analyzeBtn.addEventListener('click', async ()=>{
       }
       return response;
     }
-  }
-
-  try{
+  }  try {
     const wasTruncated = text.length > 18000;
     const truncated = wasTruncated ? text.slice(0, 18000) + "\n\n[document truncated for length]" : text;
     window.__sourceDocText = truncated;
@@ -1828,53 +1828,89 @@ analyzeBtn.addEventListener('click', async ()=>{
     const userRole = document.getElementById('userRole') ? document.getElementById('userRole').value : "Not specified";
     const telemetryConsent = document.getElementById('telemetryConsent') ? document.getElementById('telemetryConsent').checked : false;
 
-    const response = await fetchAnalyzeWithRetry({ 
+    // Run local web intelligence first
+    parserWorker.postMessage({
       documentText: truncated,
-      userState,
-      userRole,
-      telemetryConsent
+      documentType: window.__trothixDocument ? window.__trothixDocument.documentType : null,
+      userContext: { homeState: userState, role: userRole },
+      jobId: Date.now(),
+      consentTelemetry: telemetryConsent
     });
-    const parsed = await response.json();
 
-    if(!response.ok){
-      const e = new Error(parsed.error || "Something went wrong. Try again.");
-      e.retryAfterSeconds = parsed.retryAfterSeconds;
-      e.status = response.status;
-      throw e;
-    }
+    parserWorker.onmessage = async (e) => {
+      const { status, result, error } = e.data;
+      
+      if (status === 'error') {
+        clearInterval(stageTimer);
+        analyzeBtn.disabled = false;
+        statusText.textContent = '';
+        errorBox.textContent = "Engine Error: " + error;
+        errorBox.style.display = 'block';
+        return;
+      }
 
-    if(parsed.isDocument === false){
-      errorBox.textContent = parsed.reason || "This doesn't look like a contract, lease, or terms-of-service document.";
-      errorBox.style.display = 'block';
-      statusText.textContent = '';
-      analyzeBtn.disabled = false;
-      return;
-    }
+      if (result.isFullyLocal) {
+        clearInterval(stageTimer);
+        // Synthesize a UI-compatible report for the existing renderResults
+        const d = {
+          documentType: result.docType === 'NDA' ? 'Non-Disclosure Agreement' : (result.docType === 'LEASE' ? 'Lease Agreement' : 'Document'),
+          riskLevel: result.flags.some(f => f.severity === 'HIGH') ? 'high' : (result.flags.some(f => f.severity === 'MEDIUM') ? 'medium' : 'low'),
+          riskSummary: result.flags.length > 0 ? "Found some clauses that require your attention." : "Looks relatively standard, but always read carefully.",
+          topPoints: result.flags.slice(0, 3).map(f => f.message),
+          summary: "This document was parsed entirely locally on your device. Your data never left your browser.",
+          keyTerms: {
+            duration: result.extractedData.termYears ? `${result.extractedData.termYears} years` : 'Not specified',
+            payment: result.extractedData.monthlyRent ? `${result.extractedData.monthlyRent}/mo` : 'Not specified',
+            termination: result.extractedData.isUnilateral ? 'Unilateral' : 'Mutual',
+            penalties: result.extractedData.lateFeePercentage ? `${result.extractedData.lateFeePercentage}%` : 'Not specified'
+          },
+          redFlags: result.flags.map(f => ({
+            severity: f.severity.toLowerCase(),
+            clause: f.clause,
+            issue: f.message
+          })),
+          isLocal: true
+        };
+        renderResults(d);
+      } else {
+        // Document is too complex, fall back to AI
+        statusText.innerHTML = '<span class="spinner"></span>Document complex... engaging AI for deeper analysis...';
+        
+        try {
+          const aiPayloadRecommendation = result.aiPayloadRecommendation;
+          const response = await fetchAnalyzeWithRetry({ 
+            documentText: truncated,
+            userState,
+            userRole,
+            telemetryConsent,
+            aiFallbackPayload: aiPayloadRecommendation
+          });
+          const parsed = await response.json();
 
-    renderResults(parsed);
-    statusText.textContent = '';
-  }catch(err){
-    const isNetworkError = err.message === 'Failed to fetch' || err instanceof TypeError;
-    if(isNetworkError){
-      errorBox.textContent = "Couldn't reach the analysis service. Check your connection and try again.";
-    } else if(err.status === 429){
-      const wait = err.retryAfterSeconds
-        ? `about ${err.retryAfterSeconds} second${err.retryAfterSeconds === 1 ? '' : 's'}`
-        : 'about a minute';
-      errorBox.textContent = `⚠️ Service temporarily busy — we're currently processing the maximum number of AI requests allowed. Please try again in ${wait}. Thanks for your patience.`;
-    } else {
-      // Server-side already strips implementation details (status codes,
-      // upstream error bodies, etc.) before this ever reaches the browser --
-      // err.message here is always a pre-written, user-safe sentence. Never
-      // append raw error detail to what's shown on screen; if it's useful for
-      // debugging, it belongs in server logs / analytics, not the UI.
-      errorBox.textContent = err.message;
-    }
-    errorBox.style.display = 'block';
-    statusText.textContent = '';
-  }finally{
+          if (!response.ok) {
+            const e = new Error(parsed.error || "Something went wrong. Try again.");
+            if (parsed.retryAfterSeconds) e.retryAfterSeconds = parsed.retryAfterSeconds;
+            throw e;
+          }
+
+          clearInterval(stageTimer);
+          renderResults(parsed);
+        } catch (error) {
+          clearInterval(stageTimer);
+          analyzeBtn.disabled = false;
+          statusText.textContent = '';
+          errorBox.textContent = error.message;
+          errorBox.style.display = 'block';
+        }
+      }
+    };
+
+  } catch(error) {
     clearInterval(stageTimer);
     analyzeBtn.disabled = false;
+    statusText.textContent = '';
+    errorBox.textContent = error.message;
+    errorBox.style.display = 'block';
   }
 });
 
