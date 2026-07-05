@@ -1273,7 +1273,7 @@ Trothix
       <label for="docInput" class="sr-only">Document text</label>
       <textarea id="docInput" placeholder="Paste the full text of your lease, contract, or terms of service here..."></textarea>
       <div class="char-counter" id="charCounter">
-        <span id="charCount">0 / 18,000 characters</span>
+        <span id="charCount">Characters: 0 / 18,000</span>
       </div>
       <div class="truncate-notice" id="truncateNotice"></div>
       <p class="examples-hint">✨ Want to see how it works? Try a sample document.</p>
@@ -1571,17 +1571,19 @@ Trothix
         </div>
       </div>
       <div class="context-row">
-        <label class="consent-check" for="telemetryConsent" style="margin-top: 15px;">
+        <div style="font-weight: 600; font-size: 13px; color: #5a574b; margin-top: 15px; margin-bottom: 5px;">Privacy (Optional)</div>
+        <label class="consent-check" for="telemetryConsent">
           <input type="checkbox" id="telemetryConsent" checked>
-          <span>Allow Trothix to collect anonymous usage data to improve parsing accuracy.</span>
+          <span>Help improve Trothix by sharing anonymous parser performance statistics. No document text is collected.</span>
         </label>
       </div>
     </div>
     <div class="consent-notice" id="defaultConsentNotice">
       <strong>Before you analyze:</strong> your document text is sent to a secure third-party AI service for analysis. Please do not paste highly sensitive, confidential, or personally identifying information — redact names, addresses, account numbers, and anything you wouldn't want processed by an external AI provider.
+      <div style="font-weight: 600; font-size: 13px; color: #b13c32; margin-top: 15px; margin-bottom: 5px;">Required before analysis</div>
       <label class="consent-check" for="consentCheck">
         <input type="checkbox" id="consentCheck">
-        <span>I understand and agree to have my document processed by a third-party AI service for analysis.</span>
+        <span>I understand my document text will be sent to a third-party AI service.</span>
       </label>
     </div>
     <div class="action-row" id="defaultActionRow">
@@ -1886,7 +1888,7 @@ const CHAR_LIMIT = 18000;
 
 function updateCharCounter(){
   const len = docInput.value.length;
-  charCount.textContent = len.toLocaleString() + ' / ' + CHAR_LIMIT.toLocaleString() + ' characters';
+  charCount.textContent = 'Characters: ' + len.toLocaleString() + ' / ' + CHAR_LIMIT.toLocaleString();
   charCounter.classList.remove('near-limit','over-limit');
   if(len > CHAR_LIMIT){
     charCounter.classList.add('over-limit');
