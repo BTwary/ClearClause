@@ -5,7 +5,12 @@ const filePath = path.join(__dirname, 'index.html');
 let content = fs.readFileSync(filePath, 'utf8');
 
 // The block to replace
-const analyzeBlockRegex = /analyzeBtn\.addEventListener\('click', async \(\)=>\{[\s\S]*?\}\);/m;
+// NOTE: must anchor to a flush-left `});` (start of line, no indentation).
+// A plain non-greedy [\s\S]*?\}\); will stop at the FIRST "});" found anywhere
+// in the handler body -- including nested ones like `fetch(url, {...});` --
+// silently truncating the match and corrupting the file. Anchoring to ^\}\);
+// ensures we only match the handler's own top-level closing brace.
+const analyzeBlockRegex = /analyzeBtn\.addEventListener\('click', async \(\)=>\{[\s\S]*?^\}\);/m;
 
 const newAnalyzeBlock = `
 let parserWorker = new Worker('worker.js', { type: 'module' });

@@ -1,0 +1,67 @@
+{
+  "lease_01.txt": {
+    "id": "LEASE-001",
+    "purpose": "Deposit described in terms of 'months rent' with its own dollar figure BEFORE the actual rent clause -- the historical bug where the parser misread the deposit amount as rent.",
+    "origin": "synthetic",
+    "difficulty": "edge",
+    "status": "passing",
+    "introduced": "2026-07-05",
+    "docType": "LEASE",
+    "expected": {
+      "monthlyRent": 1500,
+      "securityDepositMonths": 1,
+      "lateFeePercentage": 8,
+      "landlordNoticeHours": 12,
+      "autoRenewalFlag": true
+    }
+  },
+  "lease_02.txt": {
+    "id": "LEASE-002",
+    "purpose": "Notice-before-entry word order ('Tenant shall be given 24 hours notice prior to any entry'), plus a rent cap present alongside auto-renewal -- should NOT trigger the missing-cap renewal flag.",
+    "origin": "synthetic",
+    "difficulty": "intermediate",
+    "status": "passing",
+    "introduced": "2026-07-05",
+    "docType": "LEASE",
+    "expected": {
+      "monthlyRent": 1800,
+      "securityDepositMonths": 2,
+      "lateFeePercentage": 3,
+      "landlordNoticeHours": 24,
+      "autoRenewalFlag": true,
+      "rentCapPercentage": 5
+    }
+  },
+  "lease_03.txt": {
+    "id": "LEASE-003",
+    "purpose": "KNOWN GAP: late fee is stated as a flat dollar amount ('$75') rather than a percentage. lateFeeRegex only matches percentage-style late fees, so lateFeePercentage is expected to come back null here -- this case exists to track when that gap gets fixed, not to silently pass.",
+    "origin": "synthetic",
+    "difficulty": "edge",
+    "status": "known_limitation",
+    "introduced": "2026-07-05",
+    "docType": "LEASE",
+    "expected": {
+      "monthlyRent": 1400,
+      "securityDepositMonths": 1,
+      "lateFeePercentage": null,
+      "landlordNoticeHours": 48
+    }
+  },
+  "lease_04.txt": {
+    "id": "LEASE-004",
+    "purpose": "Commercial lease with no security deposit clause at all -- a genuinely missing required field, not a parser failure. Should trigger AI fallback rather than a false extraction.",
+    "origin": "synthetic",
+    "difficulty": "edge",
+    "status": "passing",
+    "introduced": "2026-07-05",
+    "docType": "LEASE",
+    "expected": {
+      "monthlyRent": 4200,
+      "securityDepositMonths": null,
+      "lateFeePercentage": 4,
+      "landlordNoticeHours": 48,
+      "autoRenewalFlag": false,
+      "requiresAIFallback": true
+    }
+  }
+}
