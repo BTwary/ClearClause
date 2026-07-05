@@ -7,6 +7,10 @@ export function parseNDA(text, definitions) {
     counterpartyState: null, // Note: Robust extraction of counterparty state requires AI or strict templating. 
     isUnilateral: false,
     mentionsTradeSecrets: false,
+    hasBlankFields: false,
+    hasInjunctiveRelief: false,
+    hasIndemnity: false,
+    hasBroadDefinition: false,
   };
 
   // 1. Duration / Term parsing
@@ -25,8 +29,14 @@ export function parseNDA(text, definitions) {
   const matchScope = text.match(scopeRegex);
   if (matchScope) {
     extracted.confidentialityScope = matchScope[1];
+    if (/(?:any and all|all information|any information|every|whatsoever)/i.test(matchScope[1])) {
+      extracted.hasBroadDefinition = true;
+    }
   } else if (/confidential information/i.test(text)) {
     extracted.confidentialityScope = 'Found mentions of confidential information.';
+    if (/(?:any and all|all information|any information) (?:that is )?(?:disclosed|provided)/i.test(text)) {
+      extracted.hasBroadDefinition = true;
+    }
   }
 
   extracted.mentionsTradeSecrets = /trade secret/i.test(text);
@@ -39,7 +49,6 @@ export function parseNDA(text, definitions) {
   }
 
   // 4. Unilateral vs Mutual
-  // Instead of requiring them adjacent, we check if both exist anywhere in the text independently
   const hasMutual = /mutual(?: non-disclosure| confidentiality)/i.test(text);
   const hasDisclosing = /disclosing party/i.test(text);
   const hasReceiving = /receiving party/i.test(text);
@@ -47,8 +56,22 @@ export function parseNDA(text, definitions) {
   if (hasMutual) {
     extracted.isUnilateral = false;
   } else if (hasDisclosing && hasReceiving) {
-    // If it clearly defines both roles separately but lacks "mutual"
     extracted.isUnilateral = true;
+  }
+  
+  // 5. Blank Fields / Templates
+  if (/_{4,}|\[(?:Party Name|Address|Company|Date|State)\]|<(?:Party Name|Address|Company|Date|State)>/i.test(text)) {
+    extracted.hasBlankFields = true;
+  }
+  
+  // 6. Injunctive Relief
+  if (/injunct(?:ion|ive relief)|equitable relief/i.test(text)) {
+    extracted.hasInjunctiveRelief = true;
+  }
+  
+  // 7. Indemnification
+  if (/indemnify|indemnification|hold harmless/i.test(text)) {
+    extracted.hasIndemnity = true;
   }
 
   return extracted;

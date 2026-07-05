@@ -30,5 +30,27 @@ export const evaluateNDARisk = (extractedData, userContext, ruleThresholds) => {
      flags.push({ severity: 'LOW', clause: 'Scope', message: 'This is a unilateral NDA where you are the receiving party. Verify you are not required to disclose any of your own confidential information.' });
   }
 
+
+  // 4. Blank Fields / Templates
+  if (extractedData.hasBlankFields) {
+     flags.push({ severity: 'MEDIUM', clause: 'Incomplete Document', message: 'Blank fields or placeholders detected. Ensure the template is fully filled out before signing to prevent enforceability issues.' });
+  }
+
+  // 5. Injunctive Relief
+  if (extractedData.hasInjunctiveRelief) {
+     flags.push({ severity: 'MEDIUM', clause: 'Injunctive Relief', message: 'Allows the disclosing party to seek immediate court orders without proving actual monetary damages.' });
+  }
+
+  // 6. Indemnification
+  if (extractedData.hasIndemnity) {
+     flags.push({ severity: 'HIGH', clause: 'Indemnity', message: 'Requires you to compensate the disclosing party for legal losses or expenses in case of a breach, creating significant financial exposure.' });
+  }
+
+  // 7. Broad Definitions
+  if (extractedData.hasBroadDefinition) {
+     flags.push({ severity: 'LOW', clause: 'Scope', message: 'The definition of confidential information is extremely broad, favoring the disclosing party.' });
+  }
+
   return flags;
+
 };
