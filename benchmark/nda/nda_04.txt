@@ -1,0 +1,11 @@
+CONFIDENTIALITY AND NON-DISCLOSURE AGREEMENT
+
+Quantum Analytics Corp. (hereinafter referred to as the "Company") and Dana Whitfield (the "Consultant") agree as follows.
+
+1. Confidential Information. Confidential Information includes all technical data, source code, trade secret material, and business strategies disclosed by the Company to the Consultant in connection with this engagement.
+
+2. Obligations. The Consultant, as Receiving Party, shall maintain the confidentiality of all Confidential Information disclosed by the Company, as Disclosing Party, and shall not use it for any purpose outside the engagement.
+
+3. Term. The obligations of confidentiality under this Agreement shall survive indefinitely, given that the Confidential Information disclosed consists primarily of trade secret material.
+
+4. Governing Law. This Agreement shall be governed by the laws of the State of Washington.
