@@ -2081,56 +2081,52 @@ analyzeBtn.addEventListener('click', async ()=>{
     });
 
     parserWorker.onmessage = async (e) => {
-  try {
-    const { status, result, error } = e.data;
-    if (status === 'error') { ...; return; }
-    if (!result) throw new Error("Worker returned no result payload.");
-    if (result.isFullyLocal) {
-      ...
-    } else {
-      ...
-    }
-  } catch (err) {
-    clearInterval(stageTimer);
-    analyzeBtn.disabled = false;
-    statusText.textContent = '';
-    errorBox.textContent = "Rendering error: " + err.message;
-    errorBox.style.display = 'block';
-  }
-};
-      if (result.isFullyLocal) {
-        clearInterval(stageTimer);
-        statusText.textContent = '';
-        analyzeBtn.disabled = false;
-        // Synthesize a UI-compatible report for the comprehensive renderResults
-        if (result.report) {
-          result.report.isLocal = true;
-          if (result.report.keyObligations.length === 0) result.report.keyObligations.push("No specific obligations extracted by local parser.");
-          if (result.report.keyRights.length === 0) result.report.keyRights.push("No specific rights extracted by local parser.");
-          if (result.report.importantDates.length === 0) result.report.importantDates.push("No explicit deadlines found.");
-          if (result.report.missingInformation.length === 0) result.report.missingInformation.push("No critical missing fields detected.");
-          if (result.report.positiveFeatures.length === 0) result.report.positiveFeatures.push("Processed entirely on your device for maximum privacy.", "High deterministic confidence score.");
-          
-          try {
-            fetch('/api/track', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                event: 'analysis_completed_local',
-                documentType: result.report.documentType,
-                documentLength: text.length
-              }),
-              keepalive: true
-            }).catch(()=>{});
-          } catch(e) {}
-          
-          renderResults(result.report);
-        } else {
-          console.error("Local report generation failed.");
+      try {
+        const { status, result, error } = e.data;
+        
+        if (status === 'error') {
+          clearInterval(stageTimer);
+          analyzeBtn.disabled = false;
+          statusText.textContent = '';
+          errorBox.textContent = "Engine Error: " + error;
+          errorBox.style.display = 'block';
+          return;
         }
-      } else {
-        // Document is too complex, fall back to AI
-        try {
+
+        if (!result) throw new Error("Worker returned no result payload.");
+
+        if (result.isFullyLocal) {
+          clearInterval(stageTimer);
+          statusText.textContent = '';
+          analyzeBtn.disabled = false;
+          // Synthesize a UI-compatible report for the comprehensive renderResults
+          if (result.report) {
+            result.report.isLocal = true;
+            if (result.report.keyObligations.length === 0) result.report.keyObligations.push("No specific obligations extracted by local parser.");
+            if (result.report.keyRights.length === 0) result.report.keyRights.push("No specific rights extracted by local parser.");
+            if (result.report.importantDates.length === 0) result.report.importantDates.push("No explicit deadlines found.");
+            if (result.report.missingInformation.length === 0) result.report.missingInformation.push("No critical missing fields detected.");
+            if (result.report.positiveFeatures.length === 0) result.report.positiveFeatures.push("Processed entirely on your device for maximum privacy.", "High deterministic confidence score.");
+            
+            try {
+              fetch('/api/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  event: 'analysis_completed_local',
+                  documentType: result.report.documentType,
+                  documentLength: text.length
+                }),
+                keepalive: true
+              }).catch(()=>{});
+            } catch(e) {}
+            
+            renderResults(result.report);
+          } else {
+            console.error("Local report generation failed.");
+          }
+        } else {
+          // Document is too complex, fall back to AI
           const CHUNK_SIZE = 15000;
           if (text.length <= CHUNK_SIZE) {
             statusText.innerHTML = '<span class="spinner"></span>Document complex... engaging AI for deeper analysis...';
@@ -2188,13 +2184,13 @@ analyzeBtn.addEventListener('click', async ()=>{
              clearInterval(stageTimer);
              renderResults(finalParsed);
           }
-        } catch (error) {
-          clearInterval(stageTimer);
-          analyzeBtn.disabled = false;
-          statusText.textContent = '';
-          errorBox.textContent = error.message;
-          errorBox.style.display = 'block';
         }
+      } catch (err) {
+        clearInterval(stageTimer);
+        analyzeBtn.disabled = false;
+        statusText.textContent = '';
+        errorBox.textContent = "Rendering error: " + err.message;
+        errorBox.style.display = 'block';
       }
     };
 
