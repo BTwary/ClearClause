@@ -1,3 +1,5 @@
+console.log("Worker started");
+
 import { processDocument } from './core/legacy/router.js';
 
 // Baked-in fallback config if network fails
