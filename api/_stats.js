@@ -192,6 +192,7 @@ async function recordEventSupabase(event, payload) {
       if (v) calls.push(supabaseRpc("clearclause_incr", { p_key: `wouldUse_${v}` }));
       break;
     }
+    case "analysis_completed_local":
     case "completed": {
       const type = String(payload.documentType || "Unlabeled").trim().slice(0, 60) || "Unlabeled";
       calls.push(supabaseRpc("clearclause_incr", { p_key: "completedAnalyses" }));
@@ -333,6 +334,7 @@ async function recordEventRedis(event, payload) {
       if (v) await redisPipeline([["HINCRBY", WOULD_USE_HASH_KEY, v, 1]]);
       break;
     }
+    case "analysis_completed_local":
     case "completed": {
       const type = String(payload.documentType || "Unlabeled").trim().slice(0, 60) || "Unlabeled";
       const commands = [["INCR", COUNTER_KEYS.completedAnalyses], ["HINCRBY", DOC_TYPES_HASH_KEY, type, 1]];
@@ -500,6 +502,7 @@ function recordEventMemory(event, payload) {
       if (v) memoryStats.wouldUse[v] = (memoryStats.wouldUse[v] || 0) + 1;
       break;
     }
+    case "analysis_completed_local":
     case "completed": {
       memoryStats.completedAnalyses++;
       if (typeof payload.documentLength === "number") {

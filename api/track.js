@@ -9,7 +9,7 @@
 
 import { recordEvent } from "./_stats.js";
 
-const ALLOWED_EVENTS = new Set(["sample_clicked", "analysis_started"]);
+const ALLOWED_EVENTS = new Set(["sample_clicked", "analysis_started", "analysis_completed_local"]);
 const ALLOWED_SAMPLE_TYPES = new Set(["lease", "freelance", "tos"]);
 
 export default async function handler(req, res) {
@@ -27,6 +27,9 @@ export default async function handler(req, res) {
   const payload = {};
   if (event === "sample_clicked") {
     payload.sampleType = ALLOWED_SAMPLE_TYPES.has(sampleType) ? sampleType : "other";
+  } else if (event === "analysis_completed_local") {
+    payload.documentType = req.body.documentType;
+    payload.documentLength = req.body.documentLength;
   }
 
   await recordEvent(event, payload);

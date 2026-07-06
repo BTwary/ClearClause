@@ -1988,6 +1988,15 @@ analyzeBtn.addEventListener('click', async ()=>{
 
   analyzeBtn.disabled = true;
 
+  try {
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'analysis_started' }),
+      keepalive: true
+    }).catch(()=>{});
+  } catch(e) {}
+
   const processedLen = Math.min(text.length, CHAR_LIMIT);
   const loadingStages = [
     `Processing ${processedLen.toLocaleString()} characters...`,
@@ -2071,6 +2080,20 @@ analyzeBtn.addEventListener('click', async ()=>{
           if (result.report.importantDates.length === 0) result.report.importantDates.push("No explicit deadlines found.");
           if (result.report.missingInformation.length === 0) result.report.missingInformation.push("No critical missing fields detected.");
           if (result.report.positiveFeatures.length === 0) result.report.positiveFeatures.push("Processed entirely on your device for maximum privacy.", "High deterministic confidence score.");
+          
+          try {
+            fetch('/api/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                event: 'analysis_completed_local',
+                documentType: result.report.documentType,
+                documentLength: text.length
+              }),
+              keepalive: true
+            }).catch(()=>{});
+          } catch(e) {}
+          
           renderResults(result.report);
         } else {
           console.error("Local report generation failed.");
