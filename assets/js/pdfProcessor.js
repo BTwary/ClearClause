@@ -293,7 +293,7 @@ function analyzeDocumentStructure(text, fileName = "") {
   
   if (/\bemployment (agreement|contract)\b/.test(headerPreview)) {
     documentType = "Employment Contract"; typeConfidence = 0.94;
-  } else if (/\b(?:non[-\s]?disclosure|nda|confidentiality agreement)\b/.test(headerPreview)) {
+  } else if (/\b(?:non[\s\-\–\—]*disclosure|nda|confidentiality\s+agreement)\b/.test(headerPreview)) {
     documentType = "Non-Disclosure Agreement"; typeConfidence = 0.96;
   } else if (/\b(?:lease|tenant|rental)\b/.test(headerPreview)) {
     documentType = "Rental Agreement"; typeConfidence = 0.92;
