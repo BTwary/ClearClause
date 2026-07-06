@@ -1,0 +1,18 @@
+{
+  "id": "CONCEPT_PAYMENT",
+  "name": "Payment",
+  "description": "Obligation to remit funds in exchange for goods or services.",
+  "category": "Financial",
+  "severity": "High",
+  "priority": 10,
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "status": "production",
+  "actions": ["ACTION_PAY"],
+  "phrases": [],
+  "entities": ["ENTITY_MONEY", "ENTITY_DURATION"],
+  "documents": [],
+  "related": [],
+  "rules": ["RULE_PAYMENT_DEADLINE_LONG"]
+}

@@ -1,0 +1,126 @@
+[
+  {
+    "id": "CONCEPT_NOTICE_PRESENT",
+    "name": "Notice Present",
+    "description": "Checks if Notice is present.",
+    "category": "Completeness",
+    "severity": "Neutral",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_NOTICE"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "NoticePresent"
+    }
+  },
+  {
+    "id": "CONCEPT_NOTICE_MISSING",
+    "name": "Missing Notice",
+    "description": "Checks if Notice is unexpectedly missing.",
+    "category": "Completeness",
+    "severity": "High",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "documentRequiresConcept",
+          "value": "CONCEPT_NOTICE"
+        },
+        {
+          "type": "conceptMissing",
+          "value": "CONCEPT_NOTICE"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "MissingNotice"
+    }
+  },
+  {
+    "id": "CONCEPT_NOTICE_RISK",
+    "name": "Notice Risk",
+    "description": "Checks for risky Notice terms.",
+    "category": "Risk",
+    "severity": "High",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_NOTICE"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "RiskyNotice"
+    }
+  },
+  {
+    "id": "CONCEPT_NOTICE_FAIRNESS",
+    "name": "Notice Fairness",
+    "description": "Checks if Notice is balanced.",
+    "category": "Fairness",
+    "severity": "Medium",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_NOTICE"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "UnfairNotice"
+    }
+  },
+  {
+    "id": "CONCEPT_NOTICE_POSITIVE",
+    "name": "Notice Positive",
+    "description": "Checks for highly favorable Notice terms.",
+    "category": "Positive",
+    "severity": "Low",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_NOTICE"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "FavorableNotice"
+    }
+  },
+  {
+    "id": "CONCEPT_NOTICE_NEGOTIATION",
+    "name": "Notice Negotiation",
+    "description": "Identifies standard fallback positions for Notice.",
+    "category": "Negotiation",
+    "severity": "Neutral",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_NOTICE"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "NegotiateNotice"
+    }
+  }
+]

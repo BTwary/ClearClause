@@ -1,0 +1,9 @@
+[
+  {
+    "id": "PHRASE_NOTICE_MARKER",
+    "text": "sample notice phrase",
+    "intent": "Obligation",
+    "strength": "High",
+    "concept": "CONCEPT_NOTICE"
+  }
+]

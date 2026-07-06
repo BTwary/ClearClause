@@ -1,0 +1,31 @@
+{
+  "id": "CONCEPT_CONFIDENTIALITY",
+  "name": "Confidentiality",
+  "description": "Core concept representing Confidentiality.",
+  "category": "Contract Clause",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "status": "production",
+  "actions": [
+    "ACTION_DISCLOSE",
+    "ACTION_PROTECT"
+  ],
+  "phrases": [
+    "PHRASE_CONFIDENTIALITY_MARKER",
+    "PHRASE_NOT_DISCLOSE",
+    "PHRASE_STANDARD_OF_CARE"
+  ],
+  "entities": [
+    "ENTITY_CONFIDENTIALITY_TERM"
+  ],
+  "documents": [
+    "DOC_NDA"
+  ],
+  "related": [],
+  "rules": [
+    "RULE_CONFIDENTIALITY_PRESENT",
+    "RULE_CONFIDENTIALITY_MISSING",
+    "RULE_CONFIDENTIALITY_MUTUALITY_RISK"
+  ]
+}

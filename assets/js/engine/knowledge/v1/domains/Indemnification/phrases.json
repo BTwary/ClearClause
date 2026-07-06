@@ -1,0 +1,9 @@
+[
+  {
+    "id": "PHRASE_INDEMNIFICATION_MARKER",
+    "text": "sample indemnification phrase",
+    "intent": "Obligation",
+    "strength": "High",
+    "concept": "CONCEPT_INDEMNIFICATION"
+  }
+]

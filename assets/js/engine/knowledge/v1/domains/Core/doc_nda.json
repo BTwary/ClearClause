@@ -1,0 +1,13 @@
+{
+  "id": "DOC_NDA",
+  "name": "Non-Disclosure Agreement",
+  "description": "Protects confidential information shared between parties.",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "minimumSections": [],
+  "recommendedSections": [],
+  "optionalSections": [],
+  "expectedRules": [],
+  "expectedFindings": []
+}

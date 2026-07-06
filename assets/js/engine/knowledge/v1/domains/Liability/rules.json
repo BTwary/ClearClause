@@ -1,0 +1,126 @@
+[
+  {
+    "id": "CONCEPT_LIABILITY_PRESENT",
+    "name": "Liability Present",
+    "description": "Checks if Liability is present.",
+    "category": "Completeness",
+    "severity": "Neutral",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_LIABILITY"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "LiabilityPresent"
+    }
+  },
+  {
+    "id": "CONCEPT_LIABILITY_MISSING",
+    "name": "Missing Liability",
+    "description": "Checks if Liability is unexpectedly missing.",
+    "category": "Completeness",
+    "severity": "High",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "documentRequiresConcept",
+          "value": "CONCEPT_LIABILITY"
+        },
+        {
+          "type": "conceptMissing",
+          "value": "CONCEPT_LIABILITY"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "MissingLiability"
+    }
+  },
+  {
+    "id": "CONCEPT_LIABILITY_RISK",
+    "name": "Liability Risk",
+    "description": "Checks for risky Liability terms.",
+    "category": "Risk",
+    "severity": "High",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_LIABILITY"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "RiskyLiability"
+    }
+  },
+  {
+    "id": "CONCEPT_LIABILITY_FAIRNESS",
+    "name": "Liability Fairness",
+    "description": "Checks if Liability is balanced.",
+    "category": "Fairness",
+    "severity": "Medium",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_LIABILITY"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "UnfairLiability"
+    }
+  },
+  {
+    "id": "CONCEPT_LIABILITY_POSITIVE",
+    "name": "Liability Positive",
+    "description": "Checks for highly favorable Liability terms.",
+    "category": "Positive",
+    "severity": "Low",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_LIABILITY"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "FavorableLiability"
+    }
+  },
+  {
+    "id": "CONCEPT_LIABILITY_NEGOTIATION",
+    "name": "Liability Negotiation",
+    "description": "Identifies standard fallback positions for Liability.",
+    "category": "Negotiation",
+    "severity": "Neutral",
+    "status": "draft",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_LIABILITY"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "NegotiateLiability"
+    }
+  }
+]

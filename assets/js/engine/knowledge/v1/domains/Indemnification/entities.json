@@ -1,0 +1,8 @@
+[
+  {
+    "id": "ENTITY_INDEMNIFICATION_TERM",
+    "name": "Indemnification Term",
+    "extractor": "durationExtractor",
+    "normalizer": "durationNormalizer"
+  }
+]

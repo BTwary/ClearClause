@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "ontology": "3.0",
+  "domains": [
+    "Confidentiality",
+    "Payment",
+    "Termination",
+    "Liability",
+    "Indemnification",
+    "Notice"
+  ],
+  "supportedDocuments": [
+    "NDA",
+    "Employment",
+    "MSA",
+    "Lease",
+    "SaaS"
+  ]
+}

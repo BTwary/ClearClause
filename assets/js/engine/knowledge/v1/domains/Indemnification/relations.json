@@ -1,0 +1,9 @@
+[
+  {
+    "id": "REL_INDEMNIFICATION_REQUIRES_NOTICE",
+    "source": "CONCEPT_INDEMNIFICATION",
+    "target": "CONCEPT_NOTICE",
+    "relation": "requires",
+    "strength": "required"
+  }
+]

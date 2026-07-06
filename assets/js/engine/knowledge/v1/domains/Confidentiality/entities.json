@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ENTITY_CONFIDENTIALITY_TERM",
+    "name": "Confidentiality Term",
+    "extractor": "durationExtractor",
+    "normalizer": "durationNormalizer"
+  },
+  {
+    "id": "ENTITY_STANDARD_OF_CARE",
+    "name": "Standard of Care",
+    "extractor": "phraseExtractor",
+    "normalizer": "standardOfCareNormalizer"
+  }
+]

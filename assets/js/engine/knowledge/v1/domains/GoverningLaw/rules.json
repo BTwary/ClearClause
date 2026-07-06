@@ -1,0 +1,174 @@
+[
+  {
+    "id": "CONCEPT_GOVERNINGLAW_PRESENT",
+    "concept": "CONCEPT_GOVERNINGLAW",
+    "name": "GoverningLaw Present",
+    "category": "Completeness",
+    "severity": "Neutral",
+    "rationale": "TODO: Add rationale for why GoverningLaw present matters.",
+    "evidence": "TODO: Add evidence pattern.",
+    "tests": [
+      "present_positive.test.js",
+      "present_negative.test.js",
+      "present_edge.test.js"
+    ],
+    "introduced": "1.0.0",
+    "status": "Experimental",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_GOVERNINGLAW"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "GoverningLawPresent"
+    }
+  },
+  {
+    "id": "CONCEPT_GOVERNINGLAW_MISSING",
+    "concept": "CONCEPT_GOVERNINGLAW",
+    "name": "GoverningLaw Missing",
+    "category": "Completeness",
+    "severity": "High",
+    "rationale": "TODO: Add rationale for why GoverningLaw missing matters.",
+    "evidence": "TODO: Add evidence pattern.",
+    "tests": [
+      "missing_positive.test.js",
+      "missing_negative.test.js",
+      "missing_edge.test.js"
+    ],
+    "introduced": "1.0.0",
+    "status": "Experimental",
+    "when": {
+      "all": [
+        {
+          "type": "documentRequiresConcept",
+          "value": "CONCEPT_GOVERNINGLAW"
+        },
+        {
+          "type": "conceptMissing",
+          "value": "CONCEPT_GOVERNINGLAW"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "MissingGoverningLaw"
+    }
+  },
+  {
+    "id": "CONCEPT_GOVERNINGLAW_RISK",
+    "concept": "CONCEPT_GOVERNINGLAW",
+    "name": "GoverningLaw Risk",
+    "category": "Risk",
+    "severity": "High",
+    "rationale": "TODO: Add rationale for why GoverningLaw risk matters.",
+    "evidence": "TODO: Add evidence pattern.",
+    "tests": [
+      "risk_positive.test.js",
+      "risk_negative.test.js",
+      "risk_edge.test.js"
+    ],
+    "introduced": "1.0.0",
+    "status": "Experimental",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_GOVERNINGLAW"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "RiskyGoverningLaw"
+    }
+  },
+  {
+    "id": "CONCEPT_GOVERNINGLAW_FAIRNESS",
+    "concept": "CONCEPT_GOVERNINGLAW",
+    "name": "GoverningLaw Fairness",
+    "category": "Fairness",
+    "severity": "Medium",
+    "rationale": "TODO: Add rationale for why GoverningLaw fairness matters.",
+    "evidence": "TODO: Add evidence pattern.",
+    "tests": [
+      "fairness_positive.test.js",
+      "fairness_negative.test.js",
+      "fairness_edge.test.js"
+    ],
+    "introduced": "1.0.0",
+    "status": "Experimental",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_GOVERNINGLAW"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "UnfairGoverningLaw"
+    }
+  },
+  {
+    "id": "CONCEPT_GOVERNINGLAW_POSITIVE",
+    "concept": "CONCEPT_GOVERNINGLAW",
+    "name": "GoverningLaw Positive",
+    "category": "Positive",
+    "severity": "Low",
+    "rationale": "TODO: Add rationale for why GoverningLaw positive matters.",
+    "evidence": "TODO: Add evidence pattern.",
+    "tests": [
+      "positive_positive.test.js",
+      "positive_negative.test.js",
+      "positive_edge.test.js"
+    ],
+    "introduced": "1.0.0",
+    "status": "Experimental",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_GOVERNINGLAW"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "FavorableGoverningLaw"
+    }
+  },
+  {
+    "id": "CONCEPT_GOVERNINGLAW_NEGOTIATION",
+    "concept": "CONCEPT_GOVERNINGLAW",
+    "name": "GoverningLaw Negotiation",
+    "category": "Negotiation",
+    "severity": "Neutral",
+    "rationale": "TODO: Add rationale for why GoverningLaw negotiation matters.",
+    "evidence": "TODO: Add evidence pattern.",
+    "tests": [
+      "negotiation_positive.test.js",
+      "negotiation_negative.test.js",
+      "negotiation_edge.test.js"
+    ],
+    "introduced": "1.0.0",
+    "status": "Experimental",
+    "when": {
+      "all": [
+        {
+          "type": "conceptExists",
+          "value": "CONCEPT_GOVERNINGLAW"
+        }
+      ]
+    },
+    "then": {
+      "type": "createFinding",
+      "findingType": "NegotiateGoverningLaw"
+    }
+  }
+]

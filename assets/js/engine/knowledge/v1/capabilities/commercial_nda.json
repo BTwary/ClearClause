@@ -1,0 +1,21 @@
+{
+  "id": "CAPABILITY_COMMERCIAL_NDA",
+  "name": "Commercial NDA",
+  "description": "Standard non-disclosure agreement for commercial transactions.",
+  "status": "Beta",
+  "targetCoverage": 0.95,
+  "requiredDomains": [
+    "CONCEPT_CONFIDENTIALITY",
+    "CONCEPT_NOTICE",
+    "CONCEPT_TERMINATION",
+    "CONCEPT_GOVERNINGLAW",
+    "CONCEPT_REMEDIES",
+    "CONCEPT_IP",
+    "CONCEPT_SURVIVAL"
+  ],
+  "optionalDomains": [
+    "CONCEPT_NON_SOLICITATION"
+  ],
+  "minimumMaturity": "Beta",
+  "minimumCoverage": 0.80
+}

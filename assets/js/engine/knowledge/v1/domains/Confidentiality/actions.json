@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ACTION_DISCLOSE",
+    "name": "Disclose",
+    "synonyms": ["share", "publish", "reveal", "disseminate"],
+    "grammar": {
+      "subject": "Party",
+      "object": "Information",
+      "recipient": "Party",
+      "constraints": []
+    }
+  },
+  {
+    "id": "ACTION_PROTECT",
+    "name": "Protect",
+    "synonyms": ["safeguard", "secure", "hold in confidence", "keep confidential"],
+    "grammar": {
+      "subject": "Party",
+      "object": "Information",
+      "recipient": null,
+      "constraints": ["ENTITY_STANDARD_OF_CARE"]
+    }
+  }
+]

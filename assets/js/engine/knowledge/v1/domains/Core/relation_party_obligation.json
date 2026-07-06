@@ -1,0 +1,13 @@
+{
+  "id": "REL_PARTY_OBLIGATION",
+  "name": "Party Has Obligation",
+  "description": "Links a Party entity to an Action they are obligated to perform.",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "source": "Party",
+  "target": "Action",
+  "type": "has",
+  "direction": "forward",
+  "cardinality": "one-to-many"
+}

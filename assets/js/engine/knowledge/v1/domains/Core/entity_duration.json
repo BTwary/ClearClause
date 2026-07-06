@@ -1,0 +1,11 @@
+{
+  "id": "ENTITY_DURATION",
+  "name": "Duration",
+  "description": "A length of time, typically expressed in days, months, or years.",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "extractor": "TimeExtractor",
+  "normalizer": "DurationNormalizer",
+  "properties": ["value", "unit"]
+}

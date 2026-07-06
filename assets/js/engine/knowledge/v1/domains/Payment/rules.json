@@ -1,0 +1,28 @@
+{
+  "id": "RULE_PAYMENT_DEADLINE_LONG",
+  "status": "production",
+  "introduced": "1.0.0",
+  "category": "Risk",
+  "severity": "Medium",
+  "requires": [],
+  "when": {
+    "all": [
+      {
+        "field": "actions[*].verb",
+        "equals": "ACTION_PAY"
+      },
+      {
+        "field": "actions[*].constraints[*].type",
+        "equals": "duration"
+      },
+      {
+        "field": "actions[*].constraints[*].value",
+        "greater_than": 15
+      }
+    ]
+  },
+  "then": {
+    "trigger": "ExtendedPaymentTerms",
+    "message": "Payment terms exceed standard 15 days, impacting cash flow."
+  }
+}

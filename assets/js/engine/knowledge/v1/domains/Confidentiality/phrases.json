@@ -1,0 +1,23 @@
+[
+  {
+    "id": "PHRASE_CONFIDENTIALITY_MARKER",
+    "text": "shall keep confidential",
+    "intent": "Obligation",
+    "strength": "High",
+    "concept": "CONCEPT_CONFIDENTIALITY"
+  },
+  {
+    "id": "PHRASE_NOT_DISCLOSE",
+    "text": "shall not disclose",
+    "intent": "Restriction",
+    "strength": "High",
+    "concept": "CONCEPT_CONFIDENTIALITY"
+  },
+  {
+    "id": "PHRASE_STANDARD_OF_CARE",
+    "text": "commercially reasonable efforts",
+    "intent": "Standard",
+    "strength": "Medium",
+    "concept": "CONCEPT_CONFIDENTIALITY"
+  }
+]

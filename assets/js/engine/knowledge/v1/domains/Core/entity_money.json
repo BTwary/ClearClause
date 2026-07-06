@@ -1,0 +1,11 @@
+{
+  "id": "ENTITY_MONEY",
+  "name": "Money",
+  "description": "Monetary values including currency symbol and amount.",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "extractor": "CurrencyExtractor",
+  "normalizer": "CurrencyNormalizer",
+  "properties": ["currency", "amount"]
+}

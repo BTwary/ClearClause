@@ -1,0 +1,9 @@
+[
+  {
+    "id": "REL_CONFIDENTIALITY_SURVIVAL",
+    "source": "CONCEPT_CONFIDENTIALITY",
+    "target": "CONCEPT_TERMINATION",
+    "relation": "survives",
+    "strength": "required"
+  }
+]

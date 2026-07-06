@@ -1,0 +1,16 @@
+[
+  {
+    "id": "REL_LIABILITY_REFERENCES_INDEMNIFICATION",
+    "source": "CONCEPT_LIABILITY",
+    "target": "CONCEPT_INDEMNIFICATION",
+    "relation": "references",
+    "strength": "required"
+  },
+  {
+    "id": "REL_LIABILITY_LIMITED_BY_CAP",
+    "source": "CONCEPT_LIABILITY",
+    "target": "CONCEPT_LIABILITY_CAP",
+    "relation": "limits",
+    "strength": "required"
+  }
+]

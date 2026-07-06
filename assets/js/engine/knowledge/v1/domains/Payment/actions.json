@@ -1,0 +1,15 @@
+{
+  "id": "ACTION_PAY",
+  "name": "Pay",
+  "description": "To give money to someone for something you want to buy or for services provided.",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "synonyms": ["pay", "make payment", "remit", "compensate", "transfer funds", "settle"],
+  "grammar": {
+    "subject": "Party",
+    "object": "Amount",
+    "recipient": "Party",
+    "constraints": ["ENTITY_MONEY", "ENTITY_DURATION"]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "PHRASE_PROVIDED_THAT",
+  "name": "Provided That",
+  "description": "Introduces a condition or proviso to a preceding obligation.",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "type": "Condition",
+  "patterns": ["provided that", "provided, however, that", "on the condition that", "subject to"]
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "PHRASE_LIABILITY_MARKER",
+    "text": "sample liability phrase",
+    "intent": "Obligation",
+    "strength": "High",
+    "concept": "CONCEPT_LIABILITY"
+  }
+]

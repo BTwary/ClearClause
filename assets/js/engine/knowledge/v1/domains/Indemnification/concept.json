@@ -1,0 +1,29 @@
+{
+  "id": "CONCEPT_INDEMNIFICATION",
+  "name": "Indemnification",
+  "description": "Core concept representing Indemnification.",
+  "category": "Contract Clause",
+  "introduced": "1.0.0",
+  "deprecated": false,
+  "replacedBy": null,
+  "status": "draft",
+  "maturity": "Experimental",
+  "owner": "Trothix",
+  "reviewed": "2026-07-06",
+  "nextReview": "2026-10-04",
+  "actions": [
+    "ACTION_INDEMNIFICATION"
+  ],
+  "phrases": [],
+  "entities": [],
+  "documents": [],
+  "related": [],
+  "rules": [
+    "CONCEPT_INDEMNIFICATION_PRESENT",
+    "CONCEPT_INDEMNIFICATION_MISSING",
+    "CONCEPT_INDEMNIFICATION_RISK",
+    "CONCEPT_INDEMNIFICATION_FAIRNESS",
+    "CONCEPT_INDEMNIFICATION_POSITIVE",
+    "CONCEPT_INDEMNIFICATION_NEGOTIATION"
+  ]
+}
