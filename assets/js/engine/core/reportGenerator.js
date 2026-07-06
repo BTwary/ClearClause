@@ -156,7 +156,7 @@ export function generateReport(ir, meta) {
 
   // --- Risk Analysis ---
   const riskAnalysis = ir.risks.map(r => ({
-    risk: r.message,
+    issue: r.message,
     level: r.severity,
     clause: r.clause,
     recommendation: recommendationFor(r.message)
@@ -171,7 +171,7 @@ export function generateReport(ir, meta) {
   }
   if (ir.signatureStatus && ir.signatureStatus.hasSignatureBlock && !ir.signatureStatus.likelySigned) {
     riskAnalysis.push({
-      risk: 'Document appears to have a signature section that is not filled in.',
+      issue: 'Document appears to have a signature section that is not filled in.',
       level: 'HIGH',
       clause: 'Signature block',
       recommendation: 'Ensure the agreement is fully executed by authorized representatives before relying on it.'
@@ -241,13 +241,15 @@ My final confidence score for this local deterministic analysis is ${ir.confiden
   return {
     executiveSummary,
     processWalkthrough,
-    documentInfo,
+    isDocument: true,
+    documentType: docTypeLabel,
+    documentInformation: documentInfo,
     keyObligations,
     keyRights,
-    datesDeadlines,
+    importantDates: datesDeadlines,
     riskAnalysis,
     fairnessAssessment,
-    missingInfo,
+    missingInformation: missingInfo,
     positiveFeatures: positives,
     overallVerdict: {
       overallRisk: ir.riskLevel,

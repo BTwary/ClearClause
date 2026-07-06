@@ -2064,48 +2064,17 @@ analyzeBtn.addEventListener('click', async ()=>{
         statusText.textContent = '';
         analyzeBtn.disabled = false;
         // Synthesize a UI-compatible report for the comprehensive renderResults
-        const docName = result.docType === 'NDA' ? 'Non-Disclosure Agreement' : (result.docType === 'LEASE' ? 'Lease Agreement' : 'Generic Document');
-        
-        let pNames = 'the parties';
-        if (result.document && result.document.parties && result.document.parties.length > 0) {
-            pNames = result.document.parties.map(p => p.name).join(' and ');
+        if (result.report) {
+          result.report.isLocal = true;
+          if (result.report.keyObligations.length === 0) result.report.keyObligations.push("No specific obligations extracted by local parser.");
+          if (result.report.keyRights.length === 0) result.report.keyRights.push("No specific rights extracted by local parser.");
+          if (result.report.importantDates.length === 0) result.report.importantDates.push("No explicit deadlines found.");
+          if (result.report.missingInformation.length === 0) result.report.missingInformation.push("No critical missing fields detected.");
+          if (result.report.positiveFeatures.length === 0) result.report.positiveFeatures.push("Processed entirely on your device for maximum privacy.", "High deterministic confidence score.");
+          renderResults(result.report);
+        } else {
+          console.error("Local report generation failed.");
         }
-        
-        let localObligations = [];
-        if (result.obligations && result.obligations.length > 0) {
-            localObligations = result.obligations.map(o => `${o.subject} must ${o.action}.`);
-        }
-
-        const d = {
-          documentType: docName,
-          executiveSummary: `This is a ${docName} between ${pNames}. It was analyzed fully locally by our deterministic engine, which achieved a confidence score of ${result.confidenceScore}%. The primary aim is to extract the functional boundaries and identify structural legal risks without relying on an external AI. Overall, the document's structure is assessed as: ${result.fairness || 'standard'}.`,
-          documentInformation: {
-            jurisdiction: (result.document && result.document.jurisdiction && result.document.jurisdiction !== 'Unknown') ? result.document.jurisdiction : 'Not found',
-            governingLaw: (result.document && result.document.governingLaw && result.document.governingLaw !== 'Unknown') ? result.document.governingLaw : 'Not found',
-            parties: (result.document && result.document.parties && result.document.parties.length > 0) ? result.document.parties.map(p => `${p.role}: ${p.name}`).join('; ') : 'Not found',
-            duration: 'Not found'
-          },
-          keyObligations: localObligations.length > 0 ? localObligations : ["No specific obligations extracted by local parser."],
-          keyRights: [],
-          importantDates: (result.deadlines && result.deadlines.length > 0) ? result.deadlines : ["No explicit deadlines found."],
-          riskAnalysis: result.flags.map(f => ({
-            level: f.severity.charAt(0).toUpperCase() + f.severity.slice(1).toLowerCase(),
-            clause: f.clause,
-            issue: f.message,
-            recommendation: "Carefully review this clause or consult a professional."
-          })),
-          fairnessAssessment: `Based on automated local analysis, the fairness of this document is considered: ${result.fairness || 'Unknown'}.`,
-          missingInformation: (result.missingClauses && result.missingClauses.length > 0) ? result.missingClauses : ["No critical missing fields detected."],
-          positiveFeatures: ["Processed entirely on your device for maximum privacy.", "High deterministic confidence score."],
-          overallVerdict: {
-            overallRisk: (result.riskLevel || '').replace(' Risk', ''),
-            fairnessRating: "N/A",
-            legalProtectionRating: "N/A",
-            recommendation: "Review the extracted points above."
-          },
-          isLocal: true
-        };
-        renderResults(d);
       } else {
         // Document is too complex, fall back to AI
         try {
