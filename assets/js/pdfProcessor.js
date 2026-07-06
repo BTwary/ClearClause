@@ -291,15 +291,15 @@ function analyzeDocumentStructure(text, fileName = "") {
   let documentType = "Contract";
   let typeConfidence = 0.85;
   
-  if (/\bemployment (agreement|contract)\b/.test(headerPreview)) {
+  if (/\b(?:employment\s+(?:agreement|contract)|contract\s+of\s+employment|employee\s+agreement|offer\s+letter)\b/.test(headerPreview)) {
     documentType = "Employment Contract"; typeConfidence = 0.94;
-  } else if (/\b(?:non[\s\-\–\—]*disclosure|nda|confidentiality\s+agreement)\b/.test(headerPreview)) {
+  } else if (/\b(?:non[\s\-\–\—]*disclosure(?:[\s\-\–\—]*agreement)?|nda|mnda|confidentiality[\s\-\–\—]*agreement|proprietary[\s\-\–\—]*information[\s\-\–\—]*agreement)\b/.test(headerPreview)) {
     documentType = "Non-Disclosure Agreement"; typeConfidence = 0.96;
-  } else if (/\b(?:lease|tenant|rental)\b/.test(headerPreview)) {
+  } else if (/\b(?:(?:residential|commercial|roommate)?\s*lease(?:\s+agreement)?|rental\s+agreement|tenancy\s+agreement|tenant\s+agreement)\b/.test(headerPreview)) {
     documentType = "Rental Agreement"; typeConfidence = 0.92;
-  } else if (/\b(?:terms of service|terms of use)\b/.test(headerPreview)) {
+  } else if (/\b(?:terms\s+of\s+(?:service|use)|terms\s+(?:and|&)\s+conditions|tos|eula|end\s+user\s+license\s+agreement|user\s+agreement)\b/.test(headerPreview)) {
     documentType = "Terms of Service"; typeConfidence = 0.98;
-  } else if (/\b(?:independent contractor|freelance)\b/.test(headerPreview)) {
+  } else if (/\b(?:(?:independent\s+)?contractor\s+agreement|freelance(?:r)?\s+(?:agreement|contract)|consult(?:ing|ant)\s+agreement)\b/.test(headerPreview)) {
     documentType = "Freelance Agreement"; typeConfidence = 0.93;
   }
   
