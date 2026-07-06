@@ -23,33 +23,43 @@ const ROLE_SUBJECTS = [
   'The Consultant', 'Consultant', 'The Contractor', 'Contractor',
   'The Employer', 'Employer', 'The Employee', 'Employee',
   'The Licensor', 'Licensor', 'The Licensee', 'Licensee',
+  'The Lender', 'Lender', 'The Borrower', 'Borrower',
   'Party 1', 'Party A', 'Party B',
+  // Second-person / consumer-facing phrasing common in ToS, EULAs, and
+  // privacy policies ("You agree to...", "The User shall...").
+  'You', 'The User', 'User', 'The Customer', 'Customer', 'The Subscriber', 'Subscriber', 'We',
 ];
 
-export function extractObligations(clauses) {
-  const obligations = [];
-  // Sort longest-first so "The Receiving Party" matches before "Receiving Party".
+const DUTY_MODALS = ['shall', 'must', 'will', 'cannot', 'agrees to', 'agree to', 'acknowledges', 'acknowledge', 'consents to', 'consent to', 'undertakes to', 'undertake to'];
+const RIGHT_MODALS = ['may', 'is entitled to', 'has the right to', 'reserves the right to'];
+
+function buildModalRegex(modalWords) {
   const subjectAlternation = [...ROLE_SUBJECTS]
     .sort((a, b) => b.length - a.length)
     .map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|');
-  const modalRegex = new RegExp(
-    `\\b(${subjectAlternation})\\s+(shall|must|will|may|cannot|only|unless)\\s+([a-z]+)\\s+([^.,;]+)`,
+  const modalAlternation = modalWords.map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  return new RegExp(
+    `\\b(${subjectAlternation})\\s+(?:is\\s+|has\\s+|reserves\\s+)?(${modalAlternation})\\s*(?:to\\s+)?([a-z]+)?\\s*([^.,;]+)`,
     'gi'
   );
+}
 
+function extractByModal(clauses, modalWords) {
+  const results = [];
+  const modalRegex = buildModalRegex(modalWords);
   clauses.forEach(c => {
     let match;
     while ((match = modalRegex.exec(c.text)) !== null) {
-      const verb = match[3];
-      const object = match[4].trim();
+      const verb = match[3] || '';
+      const object = match[4] ? match[4].trim() : '';
       // Skip naming/definitional boilerplate ("...shall hereinafter be
       // referred to as Company") — it labels a party, it doesn't impose a
       // duty, and counting it as an obligation skews fairness scoring.
       if (verb.toLowerCase() === 'hereinafter' || /referred to as/i.test(object)) {
         continue;
       }
-      obligations.push({
+      results.push({
         subject: match[1].trim(),
         verb,
         object,
@@ -57,8 +67,15 @@ export function extractObligations(clauses) {
       });
     }
   });
+  return results;
+}
 
-  return obligations;
+export function extractObligations(clauses) {
+  return extractByModal(clauses, DUTY_MODALS);
+}
+
+export function extractRights(clauses) {
+  return extractByModal(clauses, RIGHT_MODALS);
 }
 
 // --- Document-level metadata extraction ---
@@ -142,4 +159,20 @@ export function extractPlaceholders(text) {
     placeholders.push(match[0]);
   }
   return [...new Set(placeholders)];
+}
+
+// Heuristic execution-status check. We can't reliably parse "is this PDF
+// actually signed" from text alone, so this is deliberately conservative:
+// it looks for a signature-related section, then checks whether the tail
+// of the document (where signature blocks conventionally live) still
+// contains blank-line placeholders. This will misfire on documents with
+// unconventional layouts — flagged as a known limitation, not a guarantee.
+export function extractSignatureStatus(text) {
+  const hasSignatureBlock = /signature/i.test(text);
+  if (!hasSignatureBlock) {
+    return { hasSignatureBlock: false, likelySigned: false };
+  }
+  const tail = text.slice(Math.floor(text.length * 0.7));
+  const blankLinesInTail = (tail.match(/_{3,}/g) || []).length;
+  return { hasSignatureBlock: true, likelySigned: blankLinesInTail === 0 };
 }

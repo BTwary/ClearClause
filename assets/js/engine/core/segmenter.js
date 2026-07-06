@@ -33,16 +33,21 @@ export function segmentClauses(text) {
   }
   
   if (clauses.length === 0) {
-    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-    paragraphs.forEach((p, index) => {
-       // Only treat substantial paragraphs as clauses to avoid noise
-       if (p.trim().length > 30) {
-         clauses.push({ id: String(index + 1), title: `Paragraph ${index + 1}`, text: p.trim(), types: [], entities: [] });
-       }
-    });
-    // Ultimate fallback if no paragraphs > 30 chars
-    if (clauses.length === 0) {
-        clauses.push({ id: '1', title: 'Main Body', text: text, types: [], entities: [] });
+    // No numbered-clause structure found at all (common for Terms of
+    // Service, privacy policies, EULAs, and other paragraph-style
+    // documents). Previously this collapsed the whole document into a
+    // single "Main Body" blob, which meant clause classification, risk
+    // attribution, and exception detection could only ever report one
+    // undifferentiated chunk — a 500-word ToS and a 5,000-word one looked
+    // identical to every downstream step. Split on paragraph breaks
+    // instead so each paragraph can be classified and flagged on its own.
+    const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+    if (paragraphs.length > 1) {
+      paragraphs.forEach((p, i) => {
+        clauses.push({ id: String(i + 1), title: `Paragraph ${i + 1}`, text: p, types: [], entities: [] });
+      });
+    } else {
+      clauses.push({ id: '1', title: 'Main Body', text: text, types: [], entities: [] });
     }
   }
 

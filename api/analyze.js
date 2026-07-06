@@ -223,86 +223,77 @@ async function callModelChain(apiKeys, systemPrompt, userText) {
   return lastResult; // may be null if no keys were configured at all
 }
 
-const SYSTEM_PROMPT = `You are Trothix, a highly advanced legal AI assistant. Given a pasted contract, lease, or terms-of-service document, respond with ONLY a raw JSON object (no markdown code fences, no preamble, no commentary) matching exactly this highly detailed shape:
+const SYSTEM_PROMPT = `You are Trothix, a plain-language contract analysis assistant. Given a pasted contract, lease, or terms-of-service document, respond with ONLY a raw JSON object (no markdown code fences, no preamble, no commentary) matching exactly this shape:
 
 {
   "isDocument": true,
-  "documentType": "Short specific label (e.g., 'Mutual Non-Disclosure Agreement', 'Commercial Lease')",
-  "executiveSummary": "A detailed, multi-paragraph plain-English summary of what the document is, its primary purpose, and its overall balance.",
-  "documentInformation": {
-    "jurisdiction": "Jurisdiction or courts mentioned, or 'Not specified'",
-    "governingLaw": "Governing law mentioned, or 'Not specified'",
-    "parties": "List of parties and their roles, or 'Not specified'",
-    "duration": "Duration/term of the agreement, or 'Not specified'"
+  "documentType": "short label like 'Residential Lease' or 'Freelance Contract'",
+  "riskLevel": "high" | "medium" | "low",
+  "riskSummary": "one plain-English sentence explaining the overall risk level and who it favors",
+  "topPoints": [ "up to 3 short plain-English sentences, the most important things the reader should know before anything else" ],
+  "summary": "3-5 plain-English sentences: what this document is and what the reader is agreeing to",
+  "keyTerms": {
+    "duration": "term/duration in plain language, or 'Not specified'",
+    "payment": "payment amount and terms in plain language, or 'Not specified'",
+    "termination": "how/when this can be ended, or 'Not specified'",
+    "penalties": "fees, penalties, or liability caps, or 'Not specified'"
   },
-  "keyObligations": [ "List of up to 7 plain-English sentences detailing specific duties the parties must perform." ],
-  "keyRights": [ "List of up to 5 plain-English sentences detailing discretionary rights or remedies granted." ],
-  "importantDates": [ "List of all deadlines, notice periods, and survival clauses." ],
-  "riskAnalysis": [
-    {
-      "level": "High" | "Medium" | "Low",
-      "clause": "EXACT verbatim substring from the document (under 15 words) representing this risk",
-      "issue": "Plain-English explanation of why this matters and the exposure it creates.",
-      "recommendation": "Actionable advice on what the user should do (e.g., 'Negotiate a cap', 'Fill in the blank')"
-    }
+  "redFlags": [
+    { "clause": "an EXACT substring copied verbatim from the source document, under 12 words, that this flag refers to", "issue": "one plain-English sentence explaining why this is worth attention", "severity": "high" | "medium" | "low", "anchor": "a short unique slug for this flag, e.g. 'early-termination'" }
   ],
-  "fairnessAssessment": "A thorough prose evaluation of the structural balance of the agreement. Does it favor one side? Are obligations mutual?",
-  "missingInformation": [ "List of any blanks, placeholders, or critical terms that appear to be missing." ],
-  "positiveFeatures": [ "List of up to 3 positive or standard protective boilerplate clauses included." ],
-  "overallVerdict": {
-    "overallRisk": "High" | "Medium" | "Low",
-    "fairnessRating": "1 to 5 (1 = highly asymmetric, 5 = perfectly mutual)",
-    "legalProtectionRating": "1 to 5",
-    "recommendation": "Final overall verdict (e.g., 'Review before signing', 'Standard terms, low risk')."
-  }
+  "consequences": "2-4 plain-English sentences on what realistically happens if the reader breaks or fails to meet this agreement"
 }
 
-The 'clause' field in riskAnalysis MUST be copied character-for-character from the source text. Use cautious, non-definitive language. Never give definitive legal conclusions.
+List up to 5 red flags, ordered by severity (high first). The "clause" field for each red flag MUST be copied character-for-character from the source document (not paraphrased) so it can be located and highlighted in the original text. Use cautious, non-definitive language for legal conclusions — say a clause "may be unusual" or "is worth reviewing with a professional" rather than declaring anything "illegal" or "unenforceable." Never give definitive legal conclusions.
 
-If the pasted text is empty, nonsensical, or clearly not a contract/lease/ToS, instead respond with ONLY:
+If the pasted text is empty, nonsensical, far too short to be a real document, or clearly not a contract/lease/terms-of-service (e.g. it's a poem, a recipe, random text), instead respond with ONLY:
 { "isDocument": false, "reason": "one short plain sentence explaining why this doesn't look like a document Trothix can analyze" }`;
 
-const CHUNK_SYSTEM_PROMPT = `You are Trothix, analyzing ONE SECTION of a much larger contract. You are only shown this excerpt. Respond with ONLY a raw JSON object matching exactly this shape:
+// Used for documents too large for a single call (see SINGLE_CALL_LIMIT on
+// the client). Each chunk is analyzed independently and results are merged
+// client-side before a final SYNTHESIS_SYSTEM_PROMPT call produces the
+// same shape SYSTEM_PROMPT would have produced for a single-call document.
+const CHUNK_SYSTEM_PROMPT = `You are Trothix, analyzing ONE SECTION of a much larger contract. You are only shown this excerpt, not the full document -- do not assume anything about sections you can't see. Respond with ONLY a raw JSON object (no markdown, no preamble, no commentary) matching exactly this shape:
 
 {
-  "keyObligations": [ "up to 5 duties found in this excerpt" ],
-  "keyRights": [ "up to 3 rights found in this excerpt" ],
-  "importantDates": [ "any deadlines found here" ],
-  "missingInformation": [ "any blanks found here" ],
-  "riskAnalysis": [
-    { "level": "High" | "Medium" | "Low", "clause": "verbatim quote from this excerpt", "issue": "why it matters", "recommendation": "what to do" }
+  "redFlags": [
+    { "clause": "an EXACT substring copied verbatim from THIS EXCERPT, under 12 words", "issue": "one plain-English sentence explaining why this is worth attention", "severity": "high" | "medium" | "low", "anchor": "a short unique slug for this flag" }
   ],
-  "documentInformation": {
-    "jurisdiction": "if found here",
-    "governingLaw": "if found here",
-    "parties": "if found here",
-    "duration": "if found here"
-  }
-}`;
+  "keyTerms": {
+    "duration": "only include this field if THIS EXCERPT specifies a term/duration, in plain language",
+    "payment": "only include this field if THIS EXCERPT specifies payment amount/terms, in plain language",
+    "termination": "only include this field if THIS EXCERPT specifies how/when this can be ended, in plain language",
+    "penalties": "only include this field if THIS EXCERPT specifies fees, penalties, or liability caps, in plain language"
+  },
+  "notableFacts": [ "up to 3 short plain-English facts about anything else important in this excerpt (obligations, definitions, unusual terms) that isn't already captured as a red flag" ]
+}
 
-const SYNTHESIS_SYSTEM_PROMPT = `You are Trothix. A long contract has been reviewed section-by-section. Synthesize the JSON findings from every section into the final report. Respond with ONLY a raw JSON object matching the exact full schema required for the final report:
+List up to 4 red flags found in this excerpt, ordered by severity (high first). The "clause" field MUST be copied character-for-character from this excerpt. Omit any keyTerms field this excerpt doesn't actually mention -- don't guess or write "Not specified" here. Use cautious, non-definitive language ("may be unusual", "worth reviewing with a professional") and never declare anything "illegal" or "unenforceable." If this excerpt has no meaningful contract content (e.g. it's a signature block, table of contents, or blank boilerplate), respond with { "redFlags": [], "keyTerms": {}, "notableFacts": [] }.`;
+
+// Takes the merged output of many CHUNK_SYSTEM_PROMPT calls and produces
+// the same final report shape SYSTEM_PROMPT does for a single-call document.
+const SYNTHESIS_SYSTEM_PROMPT = `You are Trothix. A long contract has already been reviewed section-by-section, and the raw findings from every section are provided below as JSON. Your only job is to synthesize those findings into the final report -- do not invent clauses or facts beyond what's given. Respond with ONLY a raw JSON object (no markdown, no preamble, no commentary) matching exactly this shape:
 
 {
   "isDocument": true,
-  "documentType": "inferred from findings",
-  "executiveSummary": "A detailed, multi-paragraph plain-English summary synthesizing all findings.",
-  "documentInformation": { "jurisdiction": "...", "governingLaw": "...", "parties": "...", "duration": "..." },
-  "keyObligations": [ "merge from findings" ],
-  "keyRights": [ "merge from findings" ],
-  "importantDates": [ "merge from findings" ],
-  "riskAnalysis": [ "merge from findings, keeping verbatim clauses" ],
-  "fairnessAssessment": "Evaluate the merged findings",
-  "missingInformation": [ "merge from findings" ],
-  "positiveFeatures": [ "deduce from findings" ],
-  "overallVerdict": {
-    "overallRisk": "High|Medium|Low",
-    "fairnessRating": "1 to 5",
-    "legalProtectionRating": "1 to 5",
-    "recommendation": "..."
-  }
+  "documentType": "short label like 'Residential Lease' or 'Freelance Contract', inferred from the findings",
+  "riskLevel": "high" | "medium" | "low",
+  "riskSummary": "one plain-English sentence explaining the overall risk level and who it favors",
+  "topPoints": [ "up to 3 short plain-English sentences, the most important things the reader should know before anything else" ],
+  "summary": "3-5 plain-English sentences: what this document is and what the reader is agreeing to, based on the findings",
+  "keyTerms": {
+    "duration": "term/duration in plain language, or 'Not specified'",
+    "payment": "payment amount and terms in plain language, or 'Not specified'",
+    "termination": "how/when this can be ended, or 'Not specified'",
+    "penalties": "fees, penalties, or liability caps, or 'Not specified'"
+  },
+  "redFlags": [
+    { "clause": "copy verbatim from the provided findings, unchanged", "issue": "copy or lightly tighten from the provided findings", "severity": "high" | "medium" | "low", "anchor": "copy from the provided findings" }
+  ],
+  "consequences": "2-4 plain-English sentences on what realistically happens if the reader breaks or fails to meet this agreement, based on the findings"
 }
 
-Do not invent clauses or facts beyond what's given.`;
+Select and reorder up to 5 red flags from the provided list, ordered by severity (high first) -- do not alter the "clause" text. If the findings are too sparse to determine a keyTerms field, use "Not specified". If the findings list is empty or has no real content, respond with { "isDocument": false, "reason": "one short plain sentence" } instead.`;
 
 // Rate limiting is job-aware, not request-aware, because one large document
 // now becomes many sub-requests (one per chunk, plus one synthesis call).

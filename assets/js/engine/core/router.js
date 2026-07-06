@@ -4,6 +4,18 @@ import { logMiss } from '../telemetry.js';
 import { NDAPlugin } from '../plugins/nda/index.js';
 import { LeasePlugin } from '../plugins/lease/index.js';
 import { UniversalPlugin } from '../plugins/universal/index.js';
+import { EmploymentPlugin } from '../plugins/employment/index.js';
+import { LoanPlugin } from '../plugins/loan/index.js';
+import { ServicePlugin } from '../plugins/service/index.js';
+
+const PLUGIN_BY_DOC_TYPE = {
+  NDA: NDAPlugin,
+  LEASE: LeasePlugin,
+  EMPLOYMENT: EmploymentPlugin,
+  LOAN: LoanPlugin,
+  CONSULTING: ServicePlugin,
+  SERVICE_AGREEMENT: ServicePlugin,
+};
 
 export async function processDocument(documentText, providedType, userContext, rules, consentTelemetry) {
   const normalizedText = documentText.replace(/\r\n/g, '\n');
@@ -12,12 +24,7 @@ export async function processDocument(documentText, providedType, userContext, r
   const docType = providedType || identifyType(normalizedText);
   
   // Load the appropriate plugin configuration
-  let pluginConfig = UniversalPlugin;
-  if (docType === 'NDA') {
-     pluginConfig = NDAPlugin;
-  } else if (docType === 'LEASE') {
-     pluginConfig = LeasePlugin;
-  }
+  const pluginConfig = PLUGIN_BY_DOC_TYPE[docType] || UniversalPlugin;
   
   // 1. Run the Deterministic NLP Pipeline (Layer 1)
   const ir = await runPipeline(normalizedText, docType, pluginConfig, definedTerms);
@@ -61,6 +68,11 @@ export async function processDocument(documentText, providedType, userContext, r
     riskLevel: ir.riskLevel,
     deadlines: ir.deadlines,
     exceptions: ir.exceptions,
+    rights: ir.rights,
+    signatureStatus: ir.signatureStatus,
+
+    // Full deterministic report matching the human-review report structure
+    report: ir.report,
 
     // Document metadata (previously extracted internally but never
     // returned to the caller, so the UI had no way to show it)
@@ -75,12 +87,27 @@ export async function processDocument(documentText, providedType, userContext, r
 }
 
 function identifyType(text) {
-  const topText = text.substring(0, 1000).toLowerCase();
+  const topText = text.substring(0, 1500).toLowerCase();
   if (topText.includes('non-disclosure') || topText.includes('confidentiality agreement')) {
     return 'NDA';
   }
   if (topText.includes('lease agreement') || (topText.includes('tenant') && topText.includes('landlord'))) {
     return 'LEASE';
+  }
+  if (topText.includes('terms of service') || topText.includes('terms and conditions') || topText.includes('terms of use')) {
+    return 'TOS';
+  }
+  if (topText.includes('employment agreement') || (topText.includes('employer') && topText.includes('employee') && topText.includes('agreement'))) {
+    return 'EMPLOYMENT';
+  }
+  if (topText.includes('consulting agreement')) {
+    return 'CONSULTING';
+  }
+  if (topText.includes('loan agreement') || topText.includes('promissory note')) {
+    return 'LOAN';
+  }
+  if (topText.includes('service agreement') || topText.includes('master service agreement') || topText.includes('statement of work')) {
+    return 'SERVICE_AGREEMENT';
   }
   return 'UNKNOWN';
 }

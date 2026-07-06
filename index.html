@@ -1599,61 +1599,40 @@ Trothix
     <div class="doc-type" id="docType"></div>
     <div class="truncate-notice" id="resultsTruncateNotice"></div>
 
-    <div class="section">
-      <div class="section-head"><h2>Executive Summary</h2></div>
-      <p class="summary-text" id="executiveSummary"></p>
-    </div>
-
     <div class="section risk-section">
-      <div class="section-head"><h2>Overall Verdict</h2><span class="n" id="riskLabel"></span></div>
+      <div class="section-head"><h2>Overall risk</h2><span class="n" id="riskLabel"></span></div>
       <div class="risk-card" id="riskCard"></div>
-      <div id="verdictDetails" style="margin-top: 15px; font-size: 14px;"></div>
     </div>
 
     <div class="section">
-      <div class="section-head"><h2>Document Information</h2></div>
-      <div class="terms-grid" id="docInfoGrid"></div>
+      <div class="section-head"><h2>Top 3 things you should know</h2></div>
+      <ol class="top-points" id="topPoints"></ol>
     </div>
 
     <div class="section">
-      <div class="section-head"><h2>Key Obligations</h2></div>
-      <ul class="top-points" id="obligationsList"></ul>
-    </div>
-
-    <div class="section" id="rightsSection">
-      <div class="section-head"><h2>Key Rights</h2></div>
-      <ul class="top-points" id="rightsList"></ul>
+      <div class="section-head"><h2>Plain-language summary</h2></div>
+      <p class="summary-text" id="summaryText"></p>
     </div>
 
     <div class="section">
-      <div class="section-head"><h2>Important Dates & Deadlines</h2></div>
-      <ul class="top-points" id="datesList"></ul>
-    </div>
-    
-    <div class="section">
-      <div class="section-head"><h2>Missing or Incomplete Information</h2></div>
-      <ul class="top-points" id="missingInfoList"></ul>
+      <div class="section-head"><h2>Key terms</h2></div>
+      <div class="terms-grid" id="termsGrid"></div>
     </div>
 
     <div class="section">
-      <div class="section-head"><h2>Fairness Assessment</h2></div>
-      <p class="summary-text" id="fairnessText"></p>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><h2>Risk Analysis</h2><span class="n" id="flagCount"></span></div>
+      <div class="section-head"><h2>Red flags</h2><span class="n" id="flagCount"></span></div>
       <div id="flagsList"></div>
-    </div>
-    
-    <div class="section" id="positiveSection">
-      <div class="section-head"><h2>Positive Features</h2></div>
-      <ul class="top-points" id="positiveList"></ul>
     </div>
 
     <div class="section">
       <div class="section-head"><h2>Original text</h2></div>
       <div class="original-doc-hint">Click a red flag above, or a highlighted passage below, to jump between them.</div>
       <div class="original-doc" id="originalDoc"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>If you break this</h2></div>
+      <div class="consequences" id="consequencesText"></div>
     </div>
 
     <div class="feedback">
@@ -2030,8 +2009,10 @@ analyzeBtn.addEventListener('click', async ()=>{
       return response;
     }
   }  try {
-    window.__sourceDocText = text;
-    window.__wasTruncated = false;
+    const wasTruncated = text.length > 18000;
+    const truncated = wasTruncated ? text.slice(0, 18000) + "\n\n[document truncated for length]" : text;
+    window.__sourceDocText = truncated;
+    window.__wasTruncated = wasTruncated;
     window.__originalLen = text.length;
 
     const userCountry = document.getElementById('userCountry') ? document.getElementById('userCountry').value : "Not specified";
@@ -2040,7 +2021,7 @@ analyzeBtn.addEventListener('click', async ()=>{
 
     // Run local web intelligence first
     parserWorker.postMessage({
-      documentText: text,
+      documentText: truncated,
       documentType: window.__trothixDocument ? window.__trothixDocument.documentType : null,
       userContext: { homeCountry: userCountry, role: userRole },
       jobId: Date.now(),
@@ -2063,109 +2044,56 @@ analyzeBtn.addEventListener('click', async ()=>{
         clearInterval(stageTimer);
         statusText.textContent = '';
         analyzeBtn.disabled = false;
-        // Synthesize a UI-compatible report for the comprehensive renderResults
-        const docName = result.docType === 'NDA' ? 'Non-Disclosure Agreement' : (result.docType === 'LEASE' ? 'Lease Agreement' : 'Generic Document');
-        
-        let pNames = 'the parties';
-        if (result.document && result.document.parties && result.document.parties.length > 0) {
-            pNames = result.document.parties.map(p => p.name).join(' and ');
-        }
-        
-        let localObligations = [];
-        if (result.obligations && result.obligations.length > 0) {
-            localObligations = result.obligations.map(o => `${o.subject} must ${o.action}.`);
-        }
-
+        // Synthesize a UI-compatible report for the existing renderResults
         const d = {
-          documentType: docName,
-          executiveSummary: `This is a ${docName} between ${pNames}. It was analyzed fully locally by our deterministic engine, which achieved a confidence score of ${result.confidenceScore}%. The primary aim is to extract the functional boundaries and identify structural legal risks without relying on an external AI. Overall, the document's structure is assessed as: ${result.fairness || 'standard'}.`,
-          documentInformation: {
+          documentType: result.docType === 'NDA' ? 'Non-Disclosure Agreement' : (result.docType === 'LEASE' ? 'Lease Agreement' : 'Document'),
+          riskLevel: result.riskLevel.replace(' Risk', '').toLowerCase(),
+          riskSummary: result.flags.length > 0 ? "Found some clauses that require your attention." : "Looks relatively standard, but always read carefully.",
+          topPoints: result.flags.slice(0, 3).map(f => f.message),
+          summary: `Parsed fully locally. Advanced deterministic NLP achieved a confidence score of ${result.confidenceScore}%.`,
+          keyTerms: {
+            fairness: result.fairness || 'Unknown',
+            confidence: (result.confidenceScore || 0) + '%',
+            missing: (result.missingClauses && result.missingClauses.length > 0) ? result.missingClauses.join(', ') : 'None',
+            deadlines: (result.deadlines && result.deadlines.length > 0) ? result.deadlines.slice(0,2).join(', ') : 'None',
             jurisdiction: (result.document && result.document.jurisdiction && result.document.jurisdiction !== 'Unknown') ? result.document.jurisdiction : 'Not found',
             governingLaw: (result.document && result.document.governingLaw && result.document.governingLaw !== 'Unknown') ? result.document.governingLaw : 'Not found',
-            parties: (result.document && result.document.parties && result.document.parties.length > 0) ? result.document.parties.map(p => `${p.role}: ${p.name}`).join('; ') : 'Not found',
-            duration: 'Not found'
+            effectiveDate: (result.document && result.document.effectiveDate && result.document.effectiveDate !== 'Unknown') ? result.document.effectiveDate : 'Not found',
+            parties: (result.document && result.document.parties && result.document.parties.length > 0)
+              ? result.document.parties.map(p => `${p.role}: ${p.name}`).join('; ')
+              : 'Not found'
           },
-          keyObligations: localObligations.length > 0 ? localObligations : ["No specific obligations extracted by local parser."],
-          keyRights: [],
-          importantDates: (result.deadlines && result.deadlines.length > 0) ? result.deadlines : ["No explicit deadlines found."],
-          riskAnalysis: result.flags.map(f => ({
-            level: f.severity.charAt(0).toUpperCase() + f.severity.slice(1).toLowerCase(),
+          redFlags: result.flags.map(f => ({
+            severity: f.severity.toLowerCase(),
             clause: f.clause,
-            issue: f.message,
-            recommendation: "Carefully review this clause or consult a professional."
+            issue: f.message
           })),
-          fairnessAssessment: `Based on automated local analysis, the fairness of this document is considered: ${result.fairness || 'Unknown'}.`,
-          missingInformation: (result.missingClauses && result.missingClauses.length > 0) ? result.missingClauses : ["No critical missing fields detected."],
-          positiveFeatures: ["Processed entirely on your device for maximum privacy.", "High deterministic confidence score."],
-          overallVerdict: {
-            overallRisk: (result.riskLevel || '').replace(' Risk', ''),
-            fairnessRating: "N/A",
-            legalProtectionRating: "N/A",
-            recommendation: "Review the extracted points above."
-          },
           isLocal: true
         };
         renderResults(d);
       } else {
         // Document is too complex, fall back to AI
+        statusText.innerHTML = '<span class="spinner"></span>Document complex... engaging AI for deeper analysis...';
+        
         try {
-          const CHUNK_SIZE = 15000;
-          if (text.length <= CHUNK_SIZE) {
-            statusText.innerHTML = '<span class="spinner"></span>Document complex... engaging AI for deeper analysis...';
-            const aiPayloadRecommendation = result.aiPayloadRecommendation;
-            const response = await fetchAnalyzeWithRetry({ 
-              documentText: text,
-              userCountry,
-              userRole,
-              telemetryConsent,
-              aiFallbackPayload: aiPayloadRecommendation
-            });
-            const parsed = await response.json();
+          const aiPayloadRecommendation = result.aiPayloadRecommendation;
+          const response = await fetchAnalyzeWithRetry({ 
+            documentText: truncated,
+            userCountry,
+            userRole,
+            telemetryConsent,
+            aiFallbackPayload: aiPayloadRecommendation
+          });
+          const parsed = await response.json();
 
-            if (!response.ok) {
-              const e = new Error(parsed.error || "Something went wrong. Try again.");
-              if (parsed.retryAfterSeconds) e.retryAfterSeconds = parsed.retryAfterSeconds;
-              throw e;
-            }
-
-            clearInterval(stageTimer);
-            renderResults(parsed);
-          } else {
-             // Chunking Logic for massive documents
-             const numChunks = Math.ceil(text.length / CHUNK_SIZE);
-             const allFindings = [];
-             for (let i = 0; i < numChunks; i++) {
-                 statusText.innerHTML = `<span class="spinner"></span>Engaging AI... analyzing section ${i + 1} of ${numChunks}...`;
-                 const chunkText = text.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-                 const response = await fetchAnalyzeWithRetry({
-                     mode: "chunk",
-                     documentText: chunkText,
-                     userCountry,
-                     userRole,
-                     telemetryConsent
-                 });
-                 const parsed = await response.json();
-                 if (!response.ok) {
-                    throw new Error(parsed.error || `Failed to analyze section ${i+1}.`);
-                 }
-                 allFindings.push(parsed);
-             }
-             
-             statusText.innerHTML = '<span class="spinner"></span>Finalizing massive document analysis... compiling comprehensive report...';
-             const synthResponse = await fetchAnalyzeWithRetry({
-                 mode: "synthesize",
-                 findings: allFindings,
-                 userCountry,
-                 userRole,
-                 telemetryConsent
-             });
-             const finalParsed = await synthResponse.json();
-             if (!synthResponse.ok) {
-                 throw new Error(finalParsed.error || "Failed to synthesize final report.");
-             }
-             clearInterval(stageTimer);
-             renderResults(finalParsed);
+          if (!response.ok) {
+            const e = new Error(parsed.error || "Something went wrong. Try again.");
+            if (parsed.retryAfterSeconds) e.retryAfterSeconds = parsed.retryAfterSeconds;
+            throw e;
           }
+
+          clearInterval(stageTimer);
+          renderResults(parsed);
         } catch (error) {
           clearInterval(stageTimer);
           analyzeBtn.disabled = false;
@@ -2200,75 +2128,44 @@ function renderResults(d){
     resultsTruncateNotice.classList.remove('show');
   }
 
-  // Handle Verdict
-  const verdict = d.overallVerdict || {};
-  const risk = (verdict.overallRisk || 'medium').toLowerCase();
+  const risk = (d.riskLevel || 'medium').toLowerCase();
   document.getElementById('riskLabel').textContent = risk.toUpperCase() + ' RISK';
   const riskCardEl = document.getElementById('riskCard');
   riskCardEl.className = 'risk-card risk-card-' + risk;
   riskCardEl.innerHTML = `
     <div class="risk-pill risk-${risk}">${escapeHtml(risk)} risk</div>
-    <div>${escapeHtml(verdict.recommendation || 'This document deserves a careful read.')}</div>`;
-  
-  const verdictDetails = document.getElementById('verdictDetails');
-  if (verdict.fairnessRating || verdict.legalProtectionRating) {
-      verdictDetails.innerHTML = `<strong>Fairness Rating:</strong> ${escapeHtml(verdict.fairnessRating || 'N/A')} <br/> <strong>Legal Protection Rating:</strong> ${escapeHtml(verdict.legalProtectionRating || 'N/A')}`;
-  } else {
-      verdictDetails.innerHTML = '';
-  }
+    <div>${escapeHtml(d.riskSummary || 'This document deserves a careful read.')}</div>`;
 
-  // Executive Summary
-  document.getElementById('executiveSummary').textContent = d.executiveSummary || '';
-
-  // Document Info
-  const docInfoGrid = document.getElementById('docInfoGrid');
-  docInfoGrid.innerHTML = '';
-  const di = d.documentInformation || {};
-  const infoLabels = { jurisdiction:'Jurisdiction', governingLaw:'Governing Law', parties:'Parties', duration:'Duration' };
-  Object.keys(infoLabels).forEach(key=>{
-    const val = di[key] || 'Not specified';
-    const el = document.createElement('div');
-    el.className = 'term';
-    el.innerHTML = `<div class="term-label">${infoLabels[key]}</div><div class="term-val">${escapeHtml(val)}</div>`;
-    docInfoGrid.appendChild(el);
+  const topPoints = document.getElementById('topPoints');
+  topPoints.innerHTML = '';
+  (d.topPoints || []).slice(0,3).forEach(point=>{
+    const li = document.createElement('li');
+    li.textContent = point;
+    topPoints.appendChild(li);
   });
 
-  // Populate Lists
-  const populateList = (id, items) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = '';
-    if (!items || items.length === 0) {
-      el.parentElement.style.display = 'none';
-      return;
-    }
-    el.parentElement.style.display = 'block';
-    items.forEach(point=>{
-      const li = document.createElement('li');
-      li.textContent = point;
-      el.appendChild(li);
-    });
-  };
+  document.getElementById('summaryText').textContent = d.summary || '';
 
-  populateList('obligationsList', d.keyObligations);
-  populateList('rightsList', d.keyRights);
-  populateList('datesList', d.importantDates);
-  populateList('missingInfoList', d.missingInformation);
-  populateList('positiveList', d.positiveFeatures);
+  const termsGrid = document.getElementById('termsGrid');
+  const termLabels = { fairness:'Fairness', confidence:'Confidence', missing:'Missing Clauses', deadlines:'Deadlines', jurisdiction:'Jurisdiction', governingLaw:'Governing Law', effectiveDate:'Effective Date', parties:'Parties' };
+  termsGrid.innerHTML = '';
+  Object.keys(termLabels).forEach(key=>{
+    const val = (d.keyTerms && d.keyTerms[key]) || 'Not specified';
+    const el = document.createElement('div');
+    el.className = 'term';
+    el.innerHTML = `<div class="term-label">${termLabels[key]}</div><div class="term-val">${escapeHtml(val)}</div>`;
+    termsGrid.appendChild(el);
+  });
 
-  // Fairness
-  document.getElementById('fairnessText').textContent = d.fairnessAssessment || '';
-
-  // Risk Analysis (Red flags replacement)
-  const flags = d.riskAnalysis || [];
-  document.getElementById('flagCount').textContent = flags.length + (flags.length===1?' risk':' risks');
+  const flags = d.redFlags || [];
+  document.getElementById('flagCount').textContent = flags.length + (flags.length===1?' flag':' flags');
   const flagsList = document.getElementById('flagsList');
   flagsList.innerHTML = '';
   if(flags.length === 0){
-    flagsList.innerHTML = '<p style="color:var(--muted);font-size:14px;">No significant risks found — still worth a careful read.</p>';
+    flagsList.innerHTML = '<p style="color:var(--muted);font-size:14px;">No significant red flags found — still worth a careful read.</p>';
   }
   flags.forEach((f,i)=>{
-    const sev = (f.level || 'medium').toLowerCase();
+    const sev = (f.severity || 'medium').toLowerCase();
     const anchor = f.anchor || ('flag-' + i);
     const el = document.createElement('div');
     el.className = 'flag';
@@ -2276,9 +2173,7 @@ function renderResults(d){
       <div class="flag-mark"><div class="flag-circle ${sev}">${i+1}</div></div>
       <div>
         <div class="flag-clause" data-anchor="${escapeHtmlAttr(anchor)}">"${escapeHtml(f.clause||'')}"</div>
-        <div class="flag-issue">${escapeHtml(f.issue||'')}</div>
-        <div style="font-size: 13px; color: #5a574b; margin-top: 6px;"><strong>Recommendation:</strong> ${escapeHtml(f.recommendation||'Review carefully.')}</div>
-        <span class="sev-tag" style="margin-top:6px; display:inline-block;">${sev} severity</span>
+        <div class="flag-issue">${escapeHtml(f.issue||'')}<span class="sev-tag">${sev} severity</span></div>
       </div>`;
     flagsList.appendChild(el);
   });
@@ -2297,8 +2192,11 @@ function renderResults(d){
     });
   });
 
+  document.getElementById('consequencesText').textContent = d.consequences || '';
+
   results.style.display = 'block';
   results.classList.remove('in');
+  // force reflow so the transition re-triggers on repeat analyses
   void results.offsetWidth;
   requestAnimationFrame(()=> results.classList.add('in'));
   results.scrollIntoView({behavior:'smooth', block:'start'});

@@ -7,7 +7,7 @@ export function calculateRisk(clauses, placeholders, riskRules) {
      riskRules.forEach(rule => {
         if (t.includes(rule.pattern.toLowerCase())) {
            score += rule.score;
-           flags.push({ severity: rule.level.toUpperCase(), clause: c.title, message: rule.explanation || `Detected risk pattern: "${rule.pattern}"` });
+           flags.push({ severity: rule.level.toUpperCase(), clause: c.title, message: `Detected risk pattern: "${rule.pattern}"` });
         }
      });
   });

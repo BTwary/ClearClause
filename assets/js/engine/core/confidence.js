@@ -35,6 +35,9 @@ export function calculateConfidence(ir, sourceText = "") {
   if (!ir.fairness || /^unknown/i.test(ir.fairness)) {
     conf -= 15; // Fairness scoring came back empty/unresolved.
   }
+  if (ir.clauses.length === 1 && sourceText.length > 1500) {
+    conf -= 15; // Long document collapsed into one unsegmented "Main Body" blob.
+  }
 
   conf = Math.max(0, Math.min(100, conf));
   return Math.round(conf);

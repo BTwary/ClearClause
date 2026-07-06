@@ -1,10 +1,11 @@
 import { segmentClauses } from './segmenter.js';
-import { extractEntities, extractObligations, extractExceptions, extractDeadlines, extractPlaceholders, extractMetadata } from './extractor.js';
+import { extractEntities, extractObligations, extractRights, extractExceptions, extractDeadlines, extractPlaceholders, extractMetadata, extractSignatureStatus } from './extractor.js';
 import { classifyClauses } from './classifier.js';
 import { calculateFairness } from '../rules/fairness.js';
 import { calculateRisk } from '../rules/riskEngine.js';
 import { verifyChecklist } from './checklist.js';
 import { calculateConfidence } from './confidence.js';
+import { generateReport } from './reportGenerator.js';
 
 export async function runPipeline(text, docType, pluginConfig, definitions = {}) {
   // 1. Setup IR
@@ -13,9 +14,11 @@ export async function runPipeline(text, docType, pluginConfig, definitions = {})
     clauses: [],
     entities: [],
     obligations: [],
+    rights: [],
     exceptions: [],
     deadlines: [],
     placeholders: [],
+    signatureStatus: { hasSignatureBlock: false, likelySigned: false },
     risks: [],
     fairness: "",
     missingClauses: [],
@@ -30,9 +33,11 @@ export async function runPipeline(text, docType, pluginConfig, definitions = {})
   // 3. Extraction
   ir.entities = extractEntities(ir.clauses);
   ir.obligations = extractObligations(ir.clauses);
+  ir.rights = extractRights(ir.clauses);
   ir.exceptions = extractExceptions(ir.clauses);
   ir.deadlines = extractDeadlines(text);
   ir.placeholders = extractPlaceholders(text);
+  ir.signatureStatus = extractSignatureStatus(text);
 
   const metadata = extractMetadata(text, definitions);
   ir.document.jurisdiction = metadata.jurisdiction || "Unknown";
@@ -45,7 +50,7 @@ export async function runPipeline(text, docType, pluginConfig, definitions = {})
   ir.clauses = classifyClauses(ir.clauses, ir.entities, ir.obligations);
 
   // 5. Rules & Scoring Engines
-  ir.fairness = calculateFairness(ir.obligations, definitions);
+  ir.fairness = calculateFairness(ir.obligations, definitions, docType);
   
   if (pluginConfig && pluginConfig.riskRules) {
      const riskResult = calculateRisk(ir.clauses, ir.placeholders, pluginConfig.riskRules);
@@ -60,6 +65,9 @@ export async function runPipeline(text, docType, pluginConfig, definitions = {})
   }
 
   ir.confidenceScore = calculateConfidence(ir, text);
+
+  // 6. Full deterministic report assembly
+  ir.report = generateReport(ir, { docType });
 
   return ir;
 }
