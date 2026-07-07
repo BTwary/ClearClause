@@ -24,7 +24,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
-     ALL YOUR EXISTING STYLES (unchanged)
+     ALL YOUR EXISTING STYLES (unchanged, with footer restored)
      ============================================================ */
   :root{
     --paper:#F6F3EC;
@@ -779,7 +779,7 @@
   .context-group select:focus{border-color:var(--ink);}
 
   /* ============================================================
-     REDESIGNED PREMIUM ANIMATION STYLES
+     REDESIGNED PREMIUM ANIMATION — ARCHITECTURE SHOWCASE
      ============================================================ */
   .trothix-card{
     flex:1;
@@ -861,6 +861,24 @@
     gap:10px;
     flex:1;
     min-height:0;
+    position:relative;
+  }
+  .trothix-card .connector{
+    position:absolute;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .8s ease;
+    z-index:5;
+    height:2px;
+    background:var(--gold);
+    border-radius:2px;
+    box-shadow:0 0 6px rgba(133,104,50,0.3);
+  }
+  .trothix-card .connector.visible{opacity:1;}
+  .trothix-card .connector.vertical{
+    width:2px;
+    height:30px;
+    background:var(--gold);
   }
   .trothix-card .anim-doc{
     background:#fcfaf7;
@@ -929,6 +947,13 @@
   .trothix-card .anim-doc .deadline-hl{
     background:rgba(156,107,31,.12);
     color:#9C6B1F;
+    padding:1px 4px;
+    border-radius:2px;
+    font-weight:500;
+  }
+  .trothix-card .anim-doc .risk-hl{
+    background:rgba(178,58,46,.1);
+    color:var(--red);
     padding:1px 4px;
     border-radius:2px;
     font-weight:500;
@@ -1017,15 +1042,30 @@
     justify-content:space-between;
     padding:1px 0;
     border-bottom:1px solid rgba(0,0,0,.04);
+    transition:background .15s;
   }
   .trothix-card .anim-metric .val{
     font-weight:600;
     color:var(--ink);
-    transition:color .3s;
+    transition:color .3s, transform .2s;
     min-width:16px;
     text-align:right;
+    display:inline-block;
   }
   .trothix-card .anim-metric .val.done{color:var(--green);}
+  .trothix-card .anim-metric .val.flash{
+    animation:metricFlash .3s ease;
+  }
+  @keyframes metricFlash{
+    0%{transform:scale(1);color:var(--green);}
+    50%{transform:scale(1.4);color:var(--gold);}
+    100%{transform:scale(1);color:var(--green);}
+  }
+  .trothix-card .anim-metric.flash-bg{
+    background:rgba(75,107,79,.1);
+    border-radius:2px;
+    transition:background .2s;
+  }
 
   .trothix-card .anim-reason{
     background:var(--paper);
@@ -1078,6 +1118,13 @@
     font-weight:600;
     color:var(--ink);
     font-family:'Inter',sans-serif;
+    opacity:0;
+    transform:translateY(4px);
+    transition:opacity .6s ease,transform .6s ease;
+  }
+  .trothix-card .anim-report .report-title.visible{
+    opacity:1;
+    transform:translateY(0);
   }
   .trothix-card .anim-report .report-item{
     font-size:.7rem;
@@ -1135,6 +1182,45 @@
     box-shadow:0 0 0 3px rgba(184,162,133,.2);
   }
   .trothix-card .anim-dots .dot.done{background:#6d8f7a;}
+
+  /* ============================================================
+     FOOTER — RESTORED (was accidentally dropped)
+     ============================================================ */
+  footer{
+    max-width:760px;
+    margin:0 auto;
+    padding:60px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--muted);
+  }
+  .footer-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:48px;
+    margin-top:28px;
+  }
+  .footer-grid h4{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:16px;
+  }
+  .footer-grid a{
+    display:block;
+    margin-bottom:10px;
+    color:var(--ink-soft);
+    text-decoration:none;
+    transition:.2s;
+  }
+  .footer-grid a:hover{
+    color:var(--red);
+    transform:translateX(3px);
+  }
+  @media(max-width:700px){
+    .footer-grid{grid-template-columns:1fr;gap:24px;}
+  }
 
   @media(max-width:760px){
     .trothix-card .anim-grid{grid-template-columns:1fr;gap:8px;}
@@ -1228,17 +1314,27 @@
             <span id="animStatusText">Initializing analysis...</span>
           </div>
 
-          <div class="anim-grid">
+          <div class="anim-grid" id="animGrid">
             <!-- Document Panel -->
             <div class="anim-doc" id="animDoc">
               <div class="anim-scan-line" id="animScanLine"></div>
-              <span class="doc-title">CONFIDENTIAL CONTRACT AGREEMENT</span>
-              <span class="doc-meta">Effective: January 15, 2024 &nbsp;·&nbsp; Docket: TRO-24-001</span>
-              <p id="ap1">This Agreement is made between <span class="party-hl" id="aparty1">ACME Corporation</span> ("Company") and <span class="party-hl" id="aparty2">Beta Solutions Inc.</span> ("Client").</p>
-              <p id="ap2"><strong>1. DEFINITIONS</strong><br>"<span class="def-hl" id="adef1">Confidential Information</span>" means any data disclosed by one party to the other. "<span class="def-hl" id="adef2">Deliverables</span>" means the software and documentation to be delivered.</p>
-              <p id="ap3"><strong>2. OBLIGATIONS</strong><br>The Company shall provide the Client with access to the Trothix platform. The Client shall pay the agreed-upon fees as set forth in Schedule A.</p>
-              <p id="ap4"><strong>3. DEADLINES</strong><br>Initial delivery by <span class="def-hl" id="adeadline1">March 1, 2024</span>. Final acceptance by <span class="def-hl" id="adeadline2">March 15, 2024</span>.</p>
-              <p id="ap5"><strong>4. TERMINATION</strong><br>Either party may terminate with 30 days written notice. All outstanding obligations shall be settled within 15 business days.</p>
+              <span class="doc-title">MASTER SERVICES AGREEMENT</span>
+              <span class="doc-meta">Effective: March 1, 2024 &nbsp;·&nbsp; Docket: MSA-2024-001</span>
+              <p id="ap1">This Agreement is entered into by <span class="party-hl" id="aparty1">ACME Corp</span> ("Company") and <span class="party-hl" id="aparty2">Beta Inc.</span> ("Client").</p>
+              <p id="ap2"><strong>1. DEFINITIONS</strong><br>
+              "<span class="def-hl" id="adef1">Confidential Information</span>" means non‑public data disclosed by either party. "<span class="def-hl" id="adef2">Deliverables</span>" means the software and documentation specified in SOWs.</p>
+              <p id="ap3"><strong>2. OBLIGATIONS</strong><br>
+              Company shall provide the Trothix platform and support. Client shall pay fees per the SOW.</p>
+              <p id="ap4"><strong>3. CONFIDENTIALITY</strong><br>
+              Each party agrees to hold the other's Confidential Information in strict confidence and not to disclose it to any third party except as required by law.</p>
+              <p id="ap5"><strong>4. INDEMNIFICATION</strong><br>
+              Company shall indemnify Client against claims arising from Company's gross negligence or willful misconduct. Client shall indemnify Company against claims arising from Client's use of the Deliverables.</p>
+              <p id="ap6"><strong>5. AUTOMATIC RENEWAL</strong><br>
+              This Agreement shall automatically renew for successive one‑year terms unless either party provides written notice of non‑renewal at least 60 days prior to expiration.</p>
+              <p id="ap7"><strong>6. GOVERNING LAW</strong><br>
+              This Agreement shall be governed by the laws of the State of California, without regard to conflict of laws principles.</p>
+              <p id="ap8"><strong>7. LIMITATION OF LIABILITY</strong><br>
+              In no event shall either party be liable for any indirect, incidental, or consequential damages. Total liability shall not exceed the total fees paid by Client in the 12 months preceding the claim.</p>
             </div>
 
             <!-- Extraction Panel -->
@@ -1248,25 +1344,24 @@
               <div class="anim-extract-item" id="aextParties">
                 <span class="anim-extract-item__label">Parties</span>
                 <div class="anim-extract-item__value">
-                  <span id="aparty1Val">ACME Corporation</span>
+                  <span id="aparty1Val">ACME Corp</span>
                   <span style="color:#6b655a;">·</span>
-                  <span id="aparty2Val">Beta Solutions Inc.</span>
+                  <span id="aparty2Val">Beta Inc.</span>
                 </div>
               </div>
 
               <div class="anim-extract-item" id="aextObligations">
                 <span class="anim-extract-item__label">Obligations</span>
                 <div class="anim-extract-item__value" id="aobligationsList">
-                  <span>▪ Provide platform access</span>
-                  <span>▪ Pay agreed fees</span>
+                  <span>▪ Provide platform &amp; support</span>
+                  <span>▪ Pay fees per SOW</span>
                 </div>
               </div>
 
               <div class="anim-extract-item" id="aextDeadlines">
                 <span class="anim-extract-item__label">Deadlines</span>
                 <div class="anim-extract-item__value" id="adeadlinesList">
-                  <span>📅 Mar 1, 2024</span>
-                  <span>📅 Mar 15, 2024</span>
+                  <span>📅 Non‑renewal: 60 days prior</span>
                 </div>
               </div>
 
@@ -1278,17 +1373,23 @@
                 <div class="anim-metric">Deadlines <span class="val" id="mDeadlines">0</span></div>
               </div>
             </div>
+
+            <!-- Connector lines -->
+            <div class="connector" id="conn1" style="top:45%; left:20%; width:30%;"></div>
+            <div class="connector" id="conn2" style="top:60%; left:20%; width:30%;"></div>
           </div>
 
           <!-- Reasoning Chain -->
           <div class="anim-reason" id="animReason">
             <div class="reason-step" id="reason1">📄 Document received</div>
-            <div class="reason-step" id="reason2">🔍 Scanning for clauses...</div>
-            <div class="reason-step" id="reason3">📋 <span class="highlight">Termination clause</span> detected</div>
-            <div class="reason-step" id="reason4">⏱️ Notice period: <span class="highlight">30 days</span> found</div>
-            <div class="reason-step" id="reason5">⚠️ No cure period <span class="highlight">identified</span></div>
-            <div class="reason-step" id="reason6">⚖️ Potential <span class="highlight">imbalance</span> in favor of Company</div>
-            <div class="reason-step" id="reason7">📊 Risk level: <span class="highlight">Medium</span> assigned</div>
+            <div class="reason-step" id="reason2">🔍 Scanning document...</div>
+            <div class="reason-step" id="reason3">⚙️ <span class="highlight">Parser</span> → extracted raw text</div>
+            <div class="reason-step" id="reason4">🧠 <span class="highlight">Legal IR</span> → building semantic graph</div>
+            <div class="reason-step" id="reason5">📚 <span class="highlight">Ontology</span> → mapping clause types</div>
+            <div class="reason-step" id="reason6">💡 <span class="highlight">Knowledge Provider</span> → retrieving legal patterns</div>
+            <div class="reason-step" id="reason7">⚡ <span class="highlight">Rule Engine</span> → applying 34 rules</div>
+            <div class="reason-step" id="reason8">📊 <span class="highlight">Risk Assessment</span> → scoring 7 risk areas</div>
+            <div class="reason-step" id="reason9">✅ <span class="highlight-green">Recommendations</span> → generated</div>
           </div>
 
           <!-- Steps dots -->
@@ -1296,12 +1397,16 @@
 
           <!-- Self-building Report -->
           <div class="anim-report" id="animReport">
-            <div class="report-title">📋 Executive Summary</div>
-            <div class="report-item" data-idx="0"><span class="check">✓</span> <span class="label">Parties identified</span> — ACME Corporation &amp; Beta Solutions Inc.</div>
-            <div class="report-item" data-idx="1"><span class="check">✓</span> <span class="label">Obligations extracted</span> — 2 key obligations found</div>
-            <div class="report-item" data-idx="2"><span class="check">✓</span> <span class="label">Deadlines detected</span> — 2 critical dates</div>
-            <div class="report-item" data-idx="3"><span class="check">✓</span> <span class="label">Risk assessment</span> — <span class="risk-badge med">Medium Risk</span></div>
-            <div class="report-item" data-idx="4"><span class="check">✓</span> <span class="label">Recommendations</span> — Review termination clause, add cure period</div>
+            <div class="report-title" id="reportTitle">📋 Executive Summary</div>
+            <div class="report-item" data-idx="0"><span class="check">✓</span> <span class="label">Parties identified</span> — ACME Corp &amp; Beta Inc.</div>
+            <div class="report-item" data-idx="1"><span class="check">✓</span> <span class="label">Obligations extracted</span> — 2 key obligations</div>
+            <div class="report-item" data-idx="2"><span class="check">✓</span> <span class="label">Confidentiality clause</span> — standard</div>
+            <div class="report-item" data-idx="3"><span class="check">✓</span> <span class="label">Indemnification</span> — mutual, reasonable</div>
+            <div class="report-item" data-idx="4"><span class="check">✓</span> <span class="label">Automatic renewal</span> — 60‑day notice required</div>
+            <div class="report-item" data-idx="5"><span class="check">✓</span> <span class="label">Governing law</span> — California</div>
+            <div class="report-item" data-idx="6"><span class="check">✓</span> <span class="label">Liability cap</span> — limited to fees paid</div>
+            <div class="report-item" data-idx="7"><span class="check">✓</span> <span class="label">Risk assessment</span> — <span class="risk-badge med">Medium Risk</span></div>
+            <div class="report-item" data-idx="8"><span class="check">✓</span> <span class="label">Recommendations</span> — Review renewal terms, consider liability cap</div>
           </div>
 
         </div>
@@ -1397,6 +1502,7 @@
       <div class="context-row">
         <div class="context-group"><label for="userCountry">Country / Jurisdiction</label>
           <select id="userCountry"><option value="Not specified">-- Select Country (Optional) --</option>
+            <!-- Full country list (abbreviated in this response for brevity, but fully present in the actual file) -->
             <option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option>
             <option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Antigua and Barbuda">Antigua and Barbuda</option>
             <option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option>
@@ -1525,6 +1631,7 @@
   </div>
 </div>
 
+<!-- ====== FOOTER ====== -->
 <footer>
   Trothix — plain-language contract review. No account needed. Nothing you paste is stored.
   <div class="footer-grid">
@@ -1539,7 +1646,7 @@
      ============================================================ -->
 
 <!-- ============================================================
-     YOUR FULL ORIGINAL JAVASCRIPT
+     YOUR FULL ORIGINAL JAVASCRIPT (samples, analyze, feedback, etc.)
      ============================================================ -->
 <script>
   // Enable developer mode by visiting ?dev once
@@ -2068,23 +2175,28 @@
 </script>
 
 <!-- ============================================================
-     REDESIGNED ANIMATION SCRIPT
+     UPDATED ANIMATION SCRIPT — ARCHITECTURE SHOWCASE
      ============================================================ -->
 <script>
   (function() {
     'use strict';
 
     const PHASES = [
-      { id: 'init', label: 'Initializing analysis...', duration: 800 },
-      { id: 'scan', label: 'Scanning document structure...', duration: 1600 },
+      { id: 'init', label: 'Initializing analysis...', duration: 600 },
+      { id: 'scan', label: 'Scanning document...', duration: 1200 },
+      { id: 'parser', label: 'Parser → extracting raw text', duration: 1000 },
+      { id: 'legal_ir', label: 'Legal IR → building semantic graph', duration: 1200 },
+      { id: 'ontology', label: 'Ontology → mapping clause types', duration: 1000 },
+      { id: 'knowledge', label: 'Knowledge Provider → retrieving patterns', duration: 1200 },
       { id: 'clauses', label: 'Detecting clauses...', duration: 1400 },
-      { id: 'definitions', label: 'Extracting definitions...', duration: 1200 },
-      { id: 'parties', label: 'Identifying parties...', duration: 1000 },
-      { id: 'obligations', label: 'Mapping obligations...', duration: 1200 },
-      { id: 'deadlines', label: 'Tracking deadlines...', duration: 1000 },
-      { id: 'reasoning', label: 'Reasoning about obligations...', duration: 1600 },
-      { id: 'risk', label: 'Assessing risk...', duration: 1400 },
-      { id: 'report', label: 'Generating report...', duration: 1600 },
+      { id: 'definitions', label: 'Extracting definitions...', duration: 1000 },
+      { id: 'parties', label: 'Identifying parties...', duration: 800 },
+      { id: 'obligations', label: 'Mapping obligations...', duration: 1000 },
+      { id: 'deadlines', label: 'Tracking deadlines...', duration: 800 },
+      { id: 'rule_engine', label: 'Rule Engine → applying 34 rules', duration: 1400 },
+      { id: 'risk', label: 'Risk Assessment → scoring 7 risk areas', duration: 1200 },
+      { id: 'recommendations', label: 'Generating recommendations...', duration: 1000 },
+      { id: 'report', label: 'Finalizing report...', duration: 1200 },
     ];
 
     const container = document.querySelector('.trothix-card');
@@ -2098,13 +2210,15 @@
     const badge = $('#animBadge');
     const scanLine = $('#animScanLine');
     const doc = $('#animDoc');
-    const reasonEl = $('#animReason');
     const reportEl = $('#animReport');
     const dotsContainer = $('#animDots');
+    const reportTitle = $('#reportTitle');
 
-    const clauseParas = ['ap2', 'ap3', 'ap4', 'ap5'].map(id => $(`#${id}`)).filter(Boolean);
-    const defSpans = ['adef1', 'adef2', 'adeadline1', 'adeadline2'].map(id => $(`#${id}`)).filter(Boolean);
+    const clauseParas = ['ap2', 'ap3', 'ap4', 'ap5', 'ap6', 'ap7', 'ap8'].map(id => $(`#${id}`)).filter(Boolean);
+    const defSpans = ['adef1', 'adef2'].map(id => $(`#${id}`)).filter(Boolean);
     const partySpans = ['aparty1', 'aparty2'].map(id => $(`#${id}`)).filter(Boolean);
+    const obligPara = document.getElementById('ap3');
+    const deadPara = document.getElementById('ap6');
 
     const extParties = $('#aextParties');
     const extObligations = $('#aextObligations');
@@ -2115,15 +2229,17 @@
     const mObligations = $('#mObligations');
     const mDeadlines = $('#mDeadlines');
 
-    const reasonSteps = ['reason1','reason2','reason3','reason4','reason5','reason6','reason7'].map(id => $(`#${id}`)).filter(Boolean);
+    const reasonSteps = ['reason1','reason2','reason3','reason4','reason5','reason6','reason7','reason8','reason9'].map(id => $(`#${id}`)).filter(Boolean);
     const reportItems = $$('.report-item', reportEl);
+
+    const conn1 = $('#conn1');
+    const conn2 = $('#conn2');
 
     let phaseIndex = 0;
     let isRunning = true;
     let timeoutId = null;
     let metricValues = { clauses: 0, definitions: 0, obligations: 0, deadlines: 0 };
-    const TARGETS = { clauses: 18, definitions: 9, obligations: 14, deadlines: 5 };
-    let dotIndex = 0;
+    const TARGETS = { clauses: 7, definitions: 2, obligations: 2, deadlines: 1 };
 
     function buildDots() {
       dotsContainer.innerHTML = '';
@@ -2142,18 +2258,20 @@
       $$('.anim-extract-item').forEach(el => el.classList.remove('visible'));
       reasonSteps.forEach(el => el.classList.remove('visible'));
       reportItems.forEach(el => el.classList.remove('visible'));
+      reportTitle.classList.remove('visible');
       reportEl.classList.remove('visible');
       scanLine.classList.remove('active');
       doc.classList.remove('anim-doc--active');
-      clauseParas.forEach(p => p.classList.remove('clause-hl'));
+      clauseParas.forEach(p => p.classList.remove('clause-hl', 'obligation-hl', 'deadline-hl', 'risk-hl'));
       defSpans.forEach(el => el.classList.remove('def-hl'));
       partySpans.forEach(el => el.classList.remove('party-hl'));
-      clauseParas.forEach(p => p.classList.remove('obligation-hl', 'deadline-hl'));
       getDots().forEach(d => d.classList.remove('active', 'done'));
       dot.className = 'anim-dot';
       dot.classList.remove('active', 'thinking');
       metricValues = { clauses: 0, definitions: 0, obligations: 0, deadlines: 0 };
       updateMetrics();
+      conn1.classList.remove('visible');
+      conn2.classList.remove('visible');
     }
 
     function updateMetrics() {
@@ -2168,10 +2286,23 @@
       if (metricValues.deadlines >= TARGETS.deadlines) mDeadlines.classList.add('done');
     }
 
-    function incrementMetric(key, target) {
+    function flashMetric(el) {
+      el.classList.remove('flash');
+      void el.offsetWidth;
+      el.classList.add('flash');
+      const parent = el.closest('.anim-metric');
+      if (parent) {
+        parent.classList.add('flash-bg');
+        setTimeout(() => parent.classList.remove('flash-bg'), 300);
+      }
+    }
+
+    function incrementMetric(key, target, el) {
       if (metricValues[key] < target) {
-        metricValues[key] = Math.min(metricValues[key] + Math.floor(Math.random() * 3) + 1, target);
+        const old = metricValues[key];
+        metricValues[key] = Math.min(metricValues[key] + Math.floor(Math.random() * 2) + 1, target);
         updateMetrics();
+        if (el && metricValues[key] > old) flashMetric(el);
         return true;
       }
       return false;
@@ -2202,20 +2333,41 @@
           scanLine.classList.add('active');
           doc.classList.add('anim-doc--active');
           break;
+        case 'parser':
+          const r1 = document.getElementById('reason3');
+          if (r1) setTimeout(() => r1.classList.add('visible'), 100);
+          break;
+        case 'legal_ir':
+          const r2 = document.getElementById('reason4');
+          if (r2) setTimeout(() => r2.classList.add('visible'), 100);
+          break;
+        case 'ontology':
+          const r3 = document.getElementById('reason5');
+          if (r3) setTimeout(() => r3.classList.add('visible'), 100);
+          break;
+        case 'knowledge':
+          const r4 = document.getElementById('reason6');
+          if (r4) setTimeout(() => r4.classList.add('visible'), 100);
+          break;
         case 'clauses':
           clauseParas.forEach((p, i) => {
             setTimeout(() => {
               p.classList.add('clause-hl');
-              incrementMetric('clauses', TARGETS.clauses);
-            }, i * 180);
+              if (i === 0) incrementMetric('clauses', TARGETS.clauses, mClauses);
+              if (i === 1) incrementMetric('clauses', TARGETS.clauses, mClauses);
+              if (i === 2) incrementMetric('clauses', TARGETS.clauses, mClauses);
+            }, i * 150);
           });
+          setTimeout(() => {
+            conn1.classList.add('visible');
+          }, 800);
           break;
         case 'definitions':
           defSpans.forEach((el, i) => {
             setTimeout(() => {
               el.classList.add('def-hl');
-              incrementMetric('definitions', TARGETS.definitions);
-            }, i * 150);
+              incrementMetric('definitions', TARGETS.definitions, mDefinitions);
+            }, i * 200);
           });
           break;
         case 'parties':
@@ -2228,49 +2380,54 @@
           break;
         case 'obligations':
           extObligations.classList.add('visible');
-          const obligPara = document.getElementById('ap3');
           if (obligPara) {
             obligPara.classList.add('obligation-hl');
-            incrementMetric('obligations', TARGETS.obligations);
+            incrementMetric('obligations', TARGETS.obligations, mObligations);
           }
           break;
         case 'deadlines':
           extDeadlines.classList.add('visible');
-          const deadPara = document.getElementById('ap4');
           if (deadPara) {
             deadPara.classList.add('deadline-hl');
-            incrementMetric('deadlines', TARGETS.deadlines);
+            incrementMetric('deadlines', TARGETS.deadlines, mDeadlines);
           }
           break;
-        case 'reasoning':
-          reasonSteps.forEach((step, i) => {
-            setTimeout(() => {
-              step.classList.add('visible');
-              if (i === 2) incrementMetric('clauses', TARGETS.clauses);
-              if (i === 4) incrementMetric('obligations', TARGETS.obligations);
-            }, i * 220);
-          });
+        case 'rule_engine':
+          const r7 = document.getElementById('reason7');
+          if (r7) setTimeout(() => r7.classList.add('visible'), 100);
+          setTimeout(() => {
+            conn2.classList.add('visible');
+          }, 400);
           break;
         case 'risk':
-          const riskStep = document.getElementById('reason7');
-          if (riskStep) {
-            setTimeout(() => {
-              riskStep.classList.add('visible');
-              incrementMetric('clauses', TARGETS.clauses);
-              incrementMetric('definitions', TARGETS.definitions);
-              incrementMetric('obligations', TARGETS.obligations);
-              incrementMetric('deadlines', TARGETS.deadlines);
-            }, 300);
-          }
+          const r8 = document.getElementById('reason8');
+          if (r8) setTimeout(() => r8.classList.add('visible'), 100);
+          setTimeout(() => {
+            [mClauses, mDefinitions, mObligations, mDeadlines].forEach(el => {
+              if (!el.classList.contains('done')) {
+                const key = el.id === 'mClauses' ? 'clauses' : el.id === 'mDefinitions' ? 'definitions' : el.id === 'mObligations' ? 'obligations' : 'deadlines';
+                metricValues[key] = TARGETS[key];
+                updateMetrics();
+                flashMetric(el);
+              }
+            });
+          }, 500);
           dot.classList.remove('thinking');
           dot.classList.add('active');
           break;
+        case 'recommendations':
+          const r9 = document.getElementById('reason9');
+          if (r9) setTimeout(() => r9.classList.add('visible'), 100);
+          break;
         case 'report':
           reportEl.classList.add('visible');
+          setTimeout(() => {
+            reportTitle.classList.add('visible');
+          }, 200);
           reportItems.forEach((item, i) => {
             setTimeout(() => {
               item.classList.add('visible');
-            }, i * 220 + 400);
+            }, i * 250 + 600);
           });
           dot.classList.remove('thinking');
           dot.classList.add('active');
@@ -2285,7 +2442,7 @@
       if (next >= PHASES.length) {
         timeoutId = setTimeout(() => {
           resetAndLoop();
-        }, 3500);
+        }, 4000);
         return;
       }
       phaseIndex = next;
